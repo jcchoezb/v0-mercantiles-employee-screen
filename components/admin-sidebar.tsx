@@ -6,8 +6,6 @@ import { cn } from "@/lib/utils"
 import {
   MessageSquare,
   Users,
-  Package,
-  FileText,
   LogOut,
   Building2,
   ChevronLeft,
@@ -16,10 +14,9 @@ import {
   BarChart3,
   UserCog,
   Settings,
-  Layers,
-  Settings2,
-  BookOpen,
-  Megaphone,
+  GitBranch,
+  Globe,
+  FileText,
 } from "lucide-react"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -37,14 +34,12 @@ interface AdminSidebarProps {
 const menuItems = [
   { id: "chat", label: "Chat en Vivo", icon: MessageSquare, roles: ["admin", "supervisor", "agent"] },
   { id: "customers", label: "Clientes", icon: Users, roles: ["admin", "supervisor", "agent"] },
-  { id: "products", label: "Productos", icon: Package, roles: ["admin", "supervisor"] },
-  { id: "categories", label: "Categorias", icon: Layers, roles: ["admin", "supervisor"] },
-  { id: "records", label: "Historial Bot", icon: FileText, roles: ["admin", "supervisor", "agent"] },
-  { id: "reports", label: "Reportes", icon: BarChart3, roles: ["admin", "supervisor", "agent"] },
+  { id: "workflows", label: "Workflows", icon: GitBranch, roles: ["admin", "supervisor"] },
+  { id: "apis", label: "APIs Externas", icon: Globe, roles: ["admin"] },
+  { id: "companies", label: "Empresas", icon: Building2, roles: ["admin"] },
+  { id: "templates", label: "Plantillas", icon: FileText, roles: ["admin", "supervisor"] },
   { id: "employees", label: "Empleados", icon: UserCog, roles: ["admin"] },
-  { id: "parameters", label: "Parametros", icon: Settings2, roles: ["admin"] },
-  { id: "catalogs", label: "Catalogos", icon: BookOpen, roles: ["admin"] },
-  { id: "campaigns", label: "Campanas", icon: Megaphone, roles: ["admin", "supervisor"] },
+  { id: "reports", label: "Reportes", icon: BarChart3, roles: ["admin", "supervisor", "agent"] },
   { id: "settings", label: "Configuracion", icon: Settings, roles: ["admin", "supervisor", "agent"] },
 ]
 

@@ -42,7 +42,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Switch } from "@/components/ui/switch"
 import { toast } from "sonner"
-import { plantillasApi } from "@/lib/api-service"
+import { plantillasMensajeApi } from "@/lib/api-service"
 import {
   Search,
   Plus,
@@ -102,7 +102,7 @@ export function TemplateManagement() {
   const fetchPlantillas = useCallback(async () => {
     setIsLoading(true)
     try {
-      const data = await plantillasApi.listar()
+      const data = await plantillasMensajeApi.listar()
       const mapped: Plantilla[] = (data as Record<string, unknown>[]).map((p) => ({
         id: Number(p.id),
         nombre: String(p.nombre ?? ""),
@@ -183,7 +183,7 @@ export function TemplateManagement() {
     }
     try {
       if (editingPlantilla) {
-        await plantillasApi.actualizar(editingPlantilla.id, {
+        await plantillasMensajeApi.actualizar(editingPlantilla.id, {
           nombre: formData.nombre,
           tipo: formData.tipo,
           contenido: formData.contenido,
@@ -191,7 +191,7 @@ export function TemplateManagement() {
         })
         toast.success("Plantilla actualizada")
       } else {
-        await plantillasApi.crear({
+        await plantillasMensajeApi.crear({
           nombre: formData.nombre,
           tipo: formData.tipo,
           contenido: formData.contenido,
@@ -209,7 +209,7 @@ export function TemplateManagement() {
   const handleDelete = async () => {
     if (!deleteId) return
     try {
-      await plantillasApi.eliminar(deleteId)
+      await plantillasMensajeApi.eliminar(deleteId)
       toast.success("Plantilla eliminada")
       setDeleteId(null)
       fetchPlantillas()
@@ -221,10 +221,10 @@ export function TemplateManagement() {
   const handleToggle = async (plantilla: Plantilla) => {
     try {
       if (plantilla.activo) {
-        await plantillasApi.desactivar(plantilla.id)
+        await plantillasMensajeApi.desactivar(plantilla.id)
         toast.success("Plantilla desactivada")
       } else {
-        await plantillasApi.activar(plantilla.id)
+        await plantillasMensajeApi.activar(plantilla.id)
         toast.success("Plantilla activada")
       }
       fetchPlantillas()

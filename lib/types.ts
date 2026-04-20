@@ -4,6 +4,8 @@ export interface Employee {
   email: string
   role: "admin" | "agent" | "supervisor"
   avatar?: string
+  empresaId?: number
+  empresaNombre?: string
 }
 
 export interface Customer {

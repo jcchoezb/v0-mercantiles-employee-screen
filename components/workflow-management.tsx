@@ -43,6 +43,7 @@ import {
 import { Switch } from "@/components/ui/switch"
 import { toast } from "sonner"
 import { workflowsApi, workflowStepsApi, apiConfigsApi, plantillasMensajeApi } from "@/lib/api-service"
+import { useAuth } from "@/lib/auth-context"
 import {
   DndContext,
   closestCenter,
@@ -186,6 +187,7 @@ function SortableStep({
 }
 
 export function WorkflowManagement() {
+  const { employee } = useAuth()
   const [workflows, setWorkflows] = useState<Workflow[]>([])
   const [filteredWorkflows, setFilteredWorkflows] = useState<Workflow[]>([])
   const [searchTerm, setSearchTerm] = useState("")
@@ -229,9 +231,10 @@ export function WorkflowManagement() {
   )
 
   const fetchWorkflows = useCallback(async () => {
+    if (!employee?.empresaId) return
     setIsLoading(true)
     try {
-      const data = await workflowsApi.listar()
+      const data = await workflowsApi.porEmpresa(employee.empresaId)
       const mapped: Workflow[] = (data as Record<string, unknown>[]).map((w) => ({
         id: Number(w.id),
         nombre: String(w.nombre ?? ""),
@@ -248,7 +251,7 @@ export function WorkflowManagement() {
     } finally {
       setIsLoading(false)
     }
-  }, [])
+  }, [employee?.empresaId])
 
   const fetchSteps = useCallback(async (workflowId: number) => {
     try {
@@ -350,7 +353,7 @@ export function WorkflowManagement() {
         await workflowsApi.crear({
           nombre: formData.nombre,
           descripcion: formData.descripcion,
-          empresaId: formData.empresaId ? Number(formData.empresaId) : undefined,
+          empresaId: employee?.empresaId ?? (formData.empresaId ? Number(formData.empresaId) : undefined),
           activo: formData.activo,
         })
         toast.success("Workflow creado")

@@ -83,6 +83,10 @@ export const authApi = {
       departamento?: string;
       telefono?: string;
       activo: boolean;
+      empresaId?: number;
+      empresaNombre?: string;
+      conversacionesActivas?: number | null;
+      citasAsignadas?: number | null;
     }>(response);
   },
 };
@@ -522,6 +526,14 @@ export const apiConfigsApi = {
   // GET /api/api-configs/activas
   activas: async () => {
     const response = await fetch(`${API_BASE_URL}/api-configs/activas`, {
+      headers: getAuthHeaders(),
+    });
+    return handleResponse<Record<string, unknown>[]>(response);
+  },
+
+  // GET /api/api-configs/empresa/:empresaId
+  porEmpresa: async (empresaId: number) => {
+    const response = await fetch(`${API_BASE_URL}/api-configs/empresa/${empresaId}`, {
       headers: getAuthHeaders(),
     });
     return handleResponse<Record<string, unknown>[]>(response);

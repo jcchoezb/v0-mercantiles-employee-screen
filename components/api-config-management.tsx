@@ -46,6 +46,7 @@ import {
   Loader2,
 } from "lucide-react"
 import { apiConfigsApi } from "@/lib/api-service"
+import { useAuth } from "@/lib/auth-context"
 
 interface ApiConfig {
   id: number
@@ -70,6 +71,7 @@ const AUTH_METHODS = [
 const ITEMS_PER_PAGE = 8
 
 export function ApiConfigManagement() {
+  const { employee } = useAuth()
   const [configs, setConfigs] = useState<ApiConfig[]>([])
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState<string>("all")
@@ -89,8 +91,9 @@ export function ApiConfigManagement() {
   })
 
   const fetchConfigs = useCallback(async () => {
+    if (!employee?.empresaId) return
     try {
-      const data = await apiConfigsApi.listar()
+      const data = await apiConfigsApi.porEmpresa(employee.empresaId)
       const mapped: ApiConfig[] = (data as Record<string, unknown>[]).map((c) => ({
         id: Number(c.id),
         nombre: String(c.nombre ?? ""),
@@ -106,7 +109,7 @@ export function ApiConfigManagement() {
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Error al cargar configuraciones")
     }
-  }, [])
+  }, [employee?.empresaId])
 
   useEffect(() => {
     fetchConfigs()
@@ -187,7 +190,7 @@ export function ApiConfigManagement() {
         await apiConfigsApi.actualizar(editingConfig.id, payload)
         toast.success("Configuracion actualizada correctamente")
       } else {
-        await apiConfigsApi.crear(payload)
+        await apiConfigsApi.crear({ ...payload, empresaId: employee?.empresaId })
         toast.success("Configuracion creada correctamente")
       }
       setIsDialogOpen(false)

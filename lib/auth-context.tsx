@@ -41,6 +41,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             email: profile.email,
             role: mapRole(profile.rol),
             avatar: profile.avatarUrl,
+            empresaId: profile.empresaId,
+            empresaNombre: profile.empresaNombre,
           });
         }
       } catch (error) {
@@ -61,12 +63,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const response = await authApi.login(email, password);
       if (response.token) {
         localStorage.setItem("auth_token", response.token);
+        // Fetch full profile to get empresaId and empresaNombre
+        const profile = await authApi.perfil();
         setEmployee({
           id: String(response.empleadoId),
           name: response.nombre,
           email: response.email,
           role: mapRole(response.rol),
           avatar: response.avatarUrl,
+          empresaId: profile?.empresaId,
+          empresaNombre: profile?.empresaNombre,
         });
         setIsLoading(false);
         return { success: true };

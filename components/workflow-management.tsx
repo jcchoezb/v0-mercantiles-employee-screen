@@ -42,7 +42,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Switch } from "@/components/ui/switch"
 import { toast } from "sonner"
-import { workflowsApi, workflowStepsApi, apiConfigsApi, plantillasApi } from "@/lib/api-service"
+import { workflowsApi, workflowStepsApi, apiConfigsApi, plantillasMensajeApi } from "@/lib/api-service"
 import {
   DndContext,
   closestCenter,
@@ -273,7 +273,7 @@ export function WorkflowManagement() {
     try {
       const [apisData, plantillasData] = await Promise.all([
         apiConfigsApi.listar(),
-        plantillasApi.listar(),
+        plantillasMensajeApi.listar(),
       ])
       setApiConfigs(
         (apisData as Record<string, unknown>[]).map((a) => ({

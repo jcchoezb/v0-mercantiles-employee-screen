@@ -48,16 +48,16 @@ import { useAuth } from "@/lib/auth-context"
 
 interface ApiConfig {
   id: number
+  empresaId: number
+  empresaNombre: string
   nombre: string
   urlBase: string
   metodoHttp: string
   endpoint: string
   authType: string
-  authValue: string
-  bodyTemplate: string
   activo: boolean
-  fechaRegistro: string
-  empresaId?: number
+  createdAt: string
+  updatedAt: string
 }
 
 const HTTP_METHODS = [
@@ -107,16 +107,16 @@ export function ApiConfigManagement() {
       const data = await apiConfigsApi.porEmpresa(employee.empresaId)
       const mapped: ApiConfig[] = (data as Record<string, unknown>[]).map((c) => ({
         id: Number(c.id),
+        empresaId: Number(c.empresaId ?? 0),
+        empresaNombre: String(c.empresaNombre ?? ""),
         nombre: String(c.nombre ?? ""),
         urlBase: String(c.urlBase ?? ""),
         metodoHttp: String(c.metodoHttp ?? "GET"),
         endpoint: String(c.endpoint ?? ""),
         authType: String(c.authType ?? "none"),
-        authValue: String(c.authValue ?? ""),
-        bodyTemplate: String(c.bodyTemplate ?? ""),
         activo: Boolean(c.activo),
-        fechaRegistro: String(c.fechaRegistro ?? ""),
-        empresaId: c.empresaId ? Number(c.empresaId) : undefined,
+        createdAt: String(c.createdAt ?? ""),
+        updatedAt: String(c.updatedAt ?? ""),
       }))
       setConfigs(mapped)
     } catch (err) {
@@ -155,8 +155,8 @@ export function ApiConfigManagement() {
         metodoHttp: config.metodoHttp,
         endpoint: config.endpoint,
         authType: config.authType,
-        authValue: config.authValue,
-        bodyTemplate: config.bodyTemplate,
+        authValue: "",
+        bodyTemplate: "",
         activo: config.activo,
       })
     } else {
@@ -265,9 +265,10 @@ export function ApiConfigManagement() {
   }
 
   const handleDownload = () => {
-    const headers = ["ID", "Nombre", "URL Base", "Metodo HTTP", "Endpoint", "Auth Type", "Estado"]
+    const headers = ["ID", "Empresa", "Nombre", "URL Base", "Metodo HTTP", "Endpoint", "Auth Type", "Estado"]
     const rows = filteredConfigs.map((c) => [
       c.id,
+      c.empresaNombre,
       c.nombre,
       c.urlBase,
       c.metodoHttp,

@@ -41,8 +41,6 @@ import {
   Download,
   Plug,
   Play,
-  CheckCircle,
-  XCircle,
   Loader2,
 } from "lucide-react"
 import { apiConfigsApi } from "@/lib/api-service"
@@ -51,21 +49,32 @@ import { useAuth } from "@/lib/auth-context"
 interface ApiConfig {
   id: number
   nombre: string
-  descripcion: string
-  baseUrl: string
-  metodoAuth: string
-  headers: Record<string, string>
-  timeout: number
+  urlBase: string
+  metodoHttp: string
+  endpoint: string
+  authType: string
+  authValue: string
+  bodyTemplate: string
   activo: boolean
   fechaRegistro: string
+  empresaId?: number
 }
 
-const AUTH_METHODS = [
+const HTTP_METHODS = [
+  { value: "GET", label: "GET" },
+  { value: "POST", label: "POST" },
+  { value: "PUT", label: "PUT" },
+  { value: "PATCH", label: "PATCH" },
+  { value: "DELETE", label: "DELETE" },
+]
+
+const AUTH_TYPES = [
   { value: "none", label: "Sin autenticacion" },
   { value: "bearer", label: "Bearer Token" },
   { value: "basic", label: "Basic Auth" },
   { value: "api_key", label: "API Key" },
-  { value: "oauth2", label: "OAuth 2.0" },
+  { value: "api_key_header", label: "API Key (Header)" },
+  { value: "api_key_query", label: "API Key (Query)" },
 ]
 
 const ITEMS_PER_PAGE = 8
@@ -83,11 +92,13 @@ export function ApiConfigManagement() {
 
   const [formData, setFormData] = useState({
     nombre: "",
-    descripcion: "",
-    baseUrl: "",
-    metodoAuth: "none",
-    headersJson: "{}",
-    timeout: 30000,
+    urlBase: "",
+    metodoHttp: "GET",
+    endpoint: "",
+    authType: "none",
+    authValue: "",
+    bodyTemplate: "",
+    activo: true,
   })
 
   const fetchConfigs = useCallback(async () => {
@@ -97,13 +108,15 @@ export function ApiConfigManagement() {
       const mapped: ApiConfig[] = (data as Record<string, unknown>[]).map((c) => ({
         id: Number(c.id),
         nombre: String(c.nombre ?? ""),
-        descripcion: String(c.descripcion ?? ""),
-        baseUrl: String(c.baseUrl ?? ""),
-        metodoAuth: String(c.metodoAuth ?? "none"),
-        headers: (c.headers as Record<string, string>) ?? {},
-        timeout: Number(c.timeout ?? 30000),
+        urlBase: String(c.urlBase ?? ""),
+        metodoHttp: String(c.metodoHttp ?? "GET"),
+        endpoint: String(c.endpoint ?? ""),
+        authType: String(c.authType ?? "none"),
+        authValue: String(c.authValue ?? ""),
+        bodyTemplate: String(c.bodyTemplate ?? ""),
         activo: Boolean(c.activo),
         fechaRegistro: String(c.fechaRegistro ?? ""),
+        empresaId: c.empresaId ? Number(c.empresaId) : undefined,
       }))
       setConfigs(mapped)
     } catch (err) {
@@ -118,7 +131,8 @@ export function ApiConfigManagement() {
   const filteredConfigs = configs.filter((config) => {
     const matchesSearch =
       config.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      config.baseUrl.toLowerCase().includes(searchTerm.toLowerCase())
+      config.urlBase.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      config.endpoint.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesStatus =
       statusFilter === "all" ||
       (statusFilter === "active" && config.activo) ||
@@ -137,21 +151,25 @@ export function ApiConfigManagement() {
       setEditingConfig(config)
       setFormData({
         nombre: config.nombre,
-        descripcion: config.descripcion,
-        baseUrl: config.baseUrl,
-        metodoAuth: config.metodoAuth,
-        headersJson: JSON.stringify(config.headers, null, 2),
-        timeout: config.timeout,
+        urlBase: config.urlBase,
+        metodoHttp: config.metodoHttp,
+        endpoint: config.endpoint,
+        authType: config.authType,
+        authValue: config.authValue,
+        bodyTemplate: config.bodyTemplate,
+        activo: config.activo,
       })
     } else {
       setEditingConfig(null)
       setFormData({
         nombre: "",
-        descripcion: "",
-        baseUrl: "",
-        metodoAuth: "none",
-        headersJson: "{}",
-        timeout: 30000,
+        urlBase: "",
+        metodoHttp: "GET",
+        endpoint: "",
+        authType: "none",
+        authValue: "",
+        bodyTemplate: "",
+        activo: true,
       })
     }
     setIsDialogOpen(true)
@@ -162,16 +180,20 @@ export function ApiConfigManagement() {
       toast.error("El nombre es obligatorio")
       return
     }
-    if (!formData.baseUrl.trim()) {
+    if (!formData.urlBase.trim()) {
       toast.error("La URL base es obligatoria")
       return
     }
-
-    let headers: Record<string, string> = {}
-    try {
-      headers = JSON.parse(formData.headersJson)
-    } catch {
-      toast.error("Los headers deben ser un JSON valido")
+    if (!formData.metodoHttp.trim()) {
+      toast.error("El metodo HTTP es obligatorio")
+      return
+    }
+    if (!formData.endpoint.trim()) {
+      toast.error("El endpoint es obligatorio")
+      return
+    }
+    if (!formData.authType.trim()) {
+      toast.error("El tipo de autenticacion es obligatorio")
       return
     }
 
@@ -179,11 +201,13 @@ export function ApiConfigManagement() {
     try {
       const payload = {
         nombre: formData.nombre,
-        descripcion: formData.descripcion,
-        baseUrl: formData.baseUrl,
-        metodoAuth: formData.metodoAuth,
-        headers,
-        timeout: formData.timeout,
+        urlBase: formData.urlBase,
+        metodoHttp: formData.metodoHttp,
+        endpoint: formData.endpoint,
+        authType: formData.authType,
+        authValue: formData.authValue,
+        bodyTemplate: formData.bodyTemplate,
+        activo: formData.activo,
       }
 
       if (editingConfig) {
@@ -241,13 +265,14 @@ export function ApiConfigManagement() {
   }
 
   const handleDownload = () => {
-    const headers = ["ID", "Nombre", "URL Base", "Metodo Auth", "Timeout", "Estado"]
+    const headers = ["ID", "Nombre", "URL Base", "Metodo HTTP", "Endpoint", "Auth Type", "Estado"]
     const rows = filteredConfigs.map((c) => [
       c.id,
       c.nombre,
-      c.baseUrl,
-      c.metodoAuth,
-      c.timeout,
+      c.urlBase,
+      c.metodoHttp,
+      c.endpoint,
+      c.authType,
       c.activo ? "Activo" : "Inactivo",
     ])
     const csvContent = [headers, ...rows].map((r) => r.join(",")).join("\n")
@@ -260,8 +285,12 @@ export function ApiConfigManagement() {
     URL.revokeObjectURL(url)
   }
 
-  const getAuthMethodLabel = (method: string) => {
-    return AUTH_METHODS.find((m) => m.value === method)?.label ?? method
+  const getAuthTypeLabel = (type: string) => {
+    return AUTH_TYPES.find((t) => t.value === type)?.label ?? type
+  }
+
+  const getHttpMethodLabel = (method: string) => {
+    return HTTP_METHODS.find((m) => m.value === method)?.label ?? method
   }
 
   return (
@@ -369,10 +398,13 @@ export function ApiConfigManagement() {
                 <TableRow className="bg-muted/50 border-border hover:bg-muted/50">
                   <TableHead className="text-muted-foreground">Nombre</TableHead>
                   <TableHead className="text-muted-foreground hidden md:table-cell">
-                    URL Base
+                    Endpoint
                   </TableHead>
                   <TableHead className="text-muted-foreground hidden lg:table-cell">
-                    Autenticacion
+                    Metodo
+                  </TableHead>
+                  <TableHead className="text-muted-foreground hidden lg:table-cell">
+                    Auth
                   </TableHead>
                   <TableHead className="text-muted-foreground">Estado</TableHead>
                   <TableHead className="text-muted-foreground text-right">Acciones</TableHead>
@@ -382,7 +414,7 @@ export function ApiConfigManagement() {
                 {paginatedConfigs.length === 0 ? (
                   <TableRow>
                     <TableCell
-                      colSpan={5}
+                      colSpan={6}
                       className="text-center py-8 text-muted-foreground"
                     >
                       No se encontraron configuraciones
@@ -399,21 +431,26 @@ export function ApiConfigManagement() {
                           <div>
                             <p className="font-medium text-foreground">{config.nombre}</p>
                             <p className="text-xs text-muted-foreground line-clamp-1">
-                              {config.descripcion || "Sin descripcion"}
+                              {config.urlBase}
                             </p>
                           </div>
                         </div>
                       </TableCell>
                       <TableCell className="hidden md:table-cell">
                         <code className="text-sm text-muted-foreground bg-muted px-2 py-1 rounded">
-                          {config.baseUrl.length > 40
-                            ? config.baseUrl.substring(0, 40) + "..."
-                            : config.baseUrl}
+                          {config.endpoint.length > 30
+                            ? config.endpoint.substring(0, 30) + "..."
+                            : config.endpoint}
                         </code>
                       </TableCell>
                       <TableCell className="hidden lg:table-cell">
-                        <Badge variant="outline" className="text-xs">
-                          {getAuthMethodLabel(config.metodoAuth)}
+                        <Badge variant="outline" className="text-xs font-mono">
+                          {getHttpMethodLabel(config.metodoHttp)}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="hidden lg:table-cell">
+                        <Badge variant="secondary" className="text-xs">
+                          {getAuthTypeLabel(config.authType)}
                         </Badge>
                       </TableCell>
                       <TableCell>
@@ -526,36 +563,26 @@ export function ApiConfigManagement() {
               />
             </div>
             <div className="space-y-2">
-              <Label className="text-foreground text-sm">Descripcion</Label>
-              <Textarea
-                value={formData.descripcion}
-                onChange={(e) => setFormData({ ...formData, descripcion: e.target.value })}
-                placeholder="Descripcion de la API"
-                className="bg-input border-border text-foreground resize-none"
-                rows={2}
-              />
-            </div>
-            <div className="space-y-2">
               <Label className="text-foreground text-sm">URL Base *</Label>
               <Input
-                value={formData.baseUrl}
-                onChange={(e) => setFormData({ ...formData, baseUrl: e.target.value })}
-                placeholder="https://api.ejemplo.com/v1"
+                value={formData.urlBase}
+                onChange={(e) => setFormData({ ...formData, urlBase: e.target.value })}
+                placeholder="https://api.ejemplo.com"
                 className="bg-input border-border text-foreground"
               />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label className="text-foreground text-sm">Metodo de Autenticacion</Label>
+                <Label className="text-foreground text-sm">Metodo HTTP *</Label>
                 <Select
-                  value={formData.metodoAuth}
-                  onValueChange={(v) => setFormData({ ...formData, metodoAuth: v })}
+                  value={formData.metodoHttp}
+                  onValueChange={(v) => setFormData({ ...formData, metodoHttp: v })}
                 >
                   <SelectTrigger className="bg-input border-border text-foreground">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent className="bg-popover border-border">
-                    {AUTH_METHODS.map((m) => (
+                    {HTTP_METHODS.map((m) => (
                       <SelectItem key={m.value} value={m.value}>
                         {m.label}
                       </SelectItem>
@@ -564,31 +591,69 @@ export function ApiConfigManagement() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label className="text-foreground text-sm">Timeout (ms)</Label>
+                <Label className="text-foreground text-sm">Endpoint *</Label>
                 <Input
-                  type="number"
-                  value={formData.timeout}
-                  onChange={(e) =>
-                    setFormData({ ...formData, timeout: Number(e.target.value) })
-                  }
-                  min={1000}
-                  max={120000}
+                  value={formData.endpoint}
+                  onChange={(e) => setFormData({ ...formData, endpoint: e.target.value })}
+                  placeholder="/v1/usuarios"
                   className="bg-input border-border text-foreground"
                 />
               </div>
             </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="text-foreground text-sm">Tipo de Autenticacion *</Label>
+                <Select
+                  value={formData.authType}
+                  onValueChange={(v) => setFormData({ ...formData, authType: v })}
+                >
+                  <SelectTrigger className="bg-input border-border text-foreground">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="bg-popover border-border">
+                    {AUTH_TYPES.map((t) => (
+                      <SelectItem key={t.value} value={t.value}>
+                        {t.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-foreground text-sm">Valor de Autenticacion</Label>
+                <Input
+                  value={formData.authValue}
+                  onChange={(e) => setFormData({ ...formData, authValue: e.target.value })}
+                  placeholder="Token o API Key"
+                  className="bg-input border-border text-foreground"
+                  type="password"
+                />
+              </div>
+            </div>
             <div className="space-y-2">
-              <Label className="text-foreground text-sm">Headers (JSON)</Label>
+              <Label className="text-foreground text-sm">Body Template (JSON)</Label>
               <Textarea
-                value={formData.headersJson}
-                onChange={(e) => setFormData({ ...formData, headersJson: e.target.value })}
-                placeholder='{"Authorization": "Bearer token", "Content-Type": "application/json"}'
+                value={formData.bodyTemplate}
+                onChange={(e) => setFormData({ ...formData, bodyTemplate: e.target.value })}
+                placeholder='{"campo1": "valor1", "campo2": "{{variable}}"}'
                 className="bg-input border-border text-foreground font-mono text-sm resize-none"
                 rows={4}
               />
               <p className="text-xs text-muted-foreground">
-                Ingresa los headers como un objeto JSON valido
+                Plantilla del body para la peticion. Usa {"{{variable}}"} para valores dinamicos
               </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="activo"
+                checked={formData.activo}
+                onChange={(e) => setFormData({ ...formData, activo: e.target.checked })}
+                className="h-4 w-4 rounded border-border"
+              />
+              <Label htmlFor="activo" className="text-foreground text-sm cursor-pointer">
+                Configuracion activa
+              </Label>
             </div>
           </div>
           <DialogFooter>

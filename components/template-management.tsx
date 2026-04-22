@@ -43,6 +43,7 @@ import {
 import { Switch } from "@/components/ui/switch"
 import { toast } from "sonner"
 import { plantillasMensajeApi } from "@/lib/api-service"
+import { useAuth } from "@/lib/auth-context"
 import {
   Search,
   Plus,
@@ -57,17 +58,19 @@ import {
 
 interface Plantilla {
   id: number
+  empresaId: number
+  empresaNombre: string
   codigo: string
   contenido: string
   esPregunta: boolean
   variables: string[]
   activo: boolean
-  fechaCreacion: string
 }
 
 const ITEMS_PER_PAGE = 10
 
 export function TemplateManagement() {
+  const { employee } = useAuth()
   const [plantillas, setPlantillas] = useState<Plantilla[]>([])
   const [filteredPlantillas, setFilteredPlantillas] = useState<Plantilla[]>([])
   const [searchTerm, setSearchTerm] = useState("")
@@ -94,12 +97,13 @@ export function TemplateManagement() {
       const data = await plantillasMensajeApi.listar()
       const mapped: Plantilla[] = (data as Record<string, unknown>[]).map((p) => ({
         id: Number(p.id),
+        empresaId: Number(p.empresaId ?? 0),
+        empresaNombre: String(p.empresaNombre ?? ""),
         codigo: String(p.codigo ?? ""),
         contenido: String(p.contenido ?? ""),
         esPregunta: Boolean(p.esPregunta),
         variables: extractVariables(String(p.contenido ?? "")),
         activo: Boolean(p.activo),
-        fechaCreacion: String(p.fechaCreacion ?? ""),
       }))
       setPlantillas(mapped)
       setFilteredPlantillas(mapped)
@@ -175,16 +179,20 @@ export function TemplateManagement() {
     try {
       if (editingPlantilla) {
         await plantillasMensajeApi.actualizar(editingPlantilla.id, {
+          empresaId: employee?.empresaId,
           codigo: formData.codigo,
           contenido: formData.contenido,
           esPregunta: formData.esPregunta,
+          activo: formData.activo,
         })
         toast.success("Plantilla actualizada")
       } else {
         await plantillasMensajeApi.crear({
+          empresaId: employee?.empresaId,
           codigo: formData.codigo,
           contenido: formData.contenido,
           esPregunta: formData.esPregunta,
+          activo: formData.activo,
         })
         toast.success("Plantilla creada")
       }
@@ -273,6 +281,7 @@ export function TemplateManagement() {
             <TableHeader>
               <TableRow className="border-border hover:bg-transparent">
                 <TableHead className="text-muted-foreground">Codigo</TableHead>
+                <TableHead className="text-muted-foreground hidden md:table-cell">Empresa</TableHead>
                 <TableHead className="text-muted-foreground hidden md:table-cell">Tipo</TableHead>
                 <TableHead className="text-muted-foreground hidden lg:table-cell">Variables</TableHead>
                 <TableHead className="text-muted-foreground">Estado</TableHead>
@@ -282,13 +291,13 @@ export function TemplateManagement() {
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                     Cargando...
                   </TableCell>
                 </TableRow>
               ) : paginatedPlantillas.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                     No se encontraron plantillas
                   </TableCell>
                 </TableRow>
@@ -307,6 +316,9 @@ export function TemplateManagement() {
                           </p>
                         </div>
                       </div>
+                    </TableCell>
+                    <TableCell className="hidden md:table-cell">
+                      <span className="text-sm text-muted-foreground">{plantilla.empresaNombre || "-"}</span>
                     </TableCell>
                     <TableCell className="hidden md:table-cell">
                       <Badge variant={plantilla.esPregunta ? "default" : "secondary"}>

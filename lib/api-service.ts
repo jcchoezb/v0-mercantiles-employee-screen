@@ -549,12 +549,17 @@ export const apiConfigsApi = {
 
   // POST /api/api-configs
   crear: async (data: {
+    empresaId?: number;
     nombre: string;
-    descripcion?: string;
-    baseUrl: string;
-    metodoAuth: string;
-    headers?: Record<string, string>;
-    timeout?: number;
+    urlBase: string;
+    metodoHttp: string;
+    endpoint: string;
+    authType: string;
+    authValue?: string;
+    bodyTemplate?: string;
+    params?: string;
+    headers?: string;
+    activo?: boolean;
   }) => {
     const response = await fetch(`${API_BASE_URL}/api-configs`, {
       method: "POST",
@@ -566,12 +571,17 @@ export const apiConfigsApi = {
 
   // PUT /api/api-configs/:id
   actualizar: async (id: number, data: {
+    empresaId?: number;
     nombre?: string;
-    descripcion?: string;
-    baseUrl?: string;
-    metodoAuth?: string;
-    headers?: Record<string, string>;
-    timeout?: number;
+    urlBase?: string;
+    metodoHttp?: string;
+    endpoint?: string;
+    authType?: string;
+    authValue?: string;
+    bodyTemplate?: string;
+    params?: string;
+    headers?: string;
+    activo?: boolean;
   }) => {
     const response = await fetch(`${API_BASE_URL}/api-configs/${id}`, {
       method: "PUT",

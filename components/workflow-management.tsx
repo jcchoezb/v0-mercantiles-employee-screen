@@ -444,17 +444,16 @@ setPlantillas(
 
   const handleSaveStep = async () => {
     if (!selectedWorkflow) return
-    if (!stepFormData.nombre.trim()) {
-      toast.error("El nombre del paso es obligatorio")
-      return
-    }
     try {
       if (editingStep) {
         await workflowStepsApi.actualizar(editingStep.id, {
-          nombre: stepFormData.nombre,
-          tipoStep: stepFormData.tipoStep,
-          configuracion: stepFormData.configuracion,
-          activo: stepFormData.activo,
+          workflowId: selectedWorkflow.id,
+          orden: editingStep.orden,
+          tipo: stepFormData.tipo,
+          plantillaId: stepFormData.plantillaId,
+          campoDestino: stepFormData.campoDestino || undefined,
+          apiConfigId: stepFormData.apiConfigId,
+          apiMapping: stepFormData.apiMapping || undefined,
         })
         toast.success("Paso actualizado")
       } else {
@@ -462,10 +461,11 @@ setPlantillas(
         await workflowStepsApi.crear({
           workflowId: selectedWorkflow.id,
           orden: newOrden,
-          tipoStep: stepFormData.tipoStep,
-          nombre: stepFormData.nombre,
-          configuracion: stepFormData.configuracion,
-          activo: stepFormData.activo,
+          tipo: stepFormData.tipo,
+          plantillaId: stepFormData.plantillaId,
+          campoDestino: stepFormData.campoDestino || undefined,
+          apiConfigId: stepFormData.apiConfigId,
+          apiMapping: stepFormData.apiMapping || undefined,
         })
         toast.success("Paso creado")
       }
@@ -514,32 +514,18 @@ setPlantillas(
 
   // Render Step Config Form based on type
   const renderStepConfigForm = () => {
-    switch (stepFormData.tipoStep) {
-      case "pregunta":
+    switch (stepFormData.tipo) {
+      case "PREGUNTA":
         return (
           <>
             <div className="space-y-2">
-              <Label className="text-foreground text-sm">Texto de la Pregunta</Label>
-              <Textarea
-                value={String(stepFormData.configuracion.texto ?? "")}
-                onChange={(e) =>
-                  setStepFormData({
-                    ...stepFormData,
-                    configuracion: { ...stepFormData.configuracion, texto: e.target.value },
-                  })
-                }
-                placeholder="Escribe la pregunta que hara el bot..."
-                className="bg-input border-border text-sm min-h-[80px]"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label className="text-foreground text-sm">Plantilla (opcional)</Label>
+              <Label className="text-foreground text-sm">Plantilla de la Pregunta</Label>
               <Select
-                value={stepFormData.configuracion.plantillaId ? String(stepFormData.configuracion.plantillaId) : "none"}
+                value={stepFormData.plantillaId ? String(stepFormData.plantillaId) : "none"}
                 onValueChange={(value) =>
                   setStepFormData({
                     ...stepFormData,
-                    configuracion: { ...stepFormData.configuracion, plantillaId: value === "none" ? undefined : value },
+                    plantillaId: value === "none" ? undefined : Number(value),
                   })
                 }
               >
@@ -557,13 +543,13 @@ setPlantillas(
               </Select>
             </div>
             <div className="space-y-2">
-              <Label className="text-foreground text-sm">Variable a guardar</Label>
+              <Label className="text-foreground text-sm">Campo Destino (variable a guardar)</Label>
               <Input
-                value={String(stepFormData.configuracion.variable ?? "")}
+                value={stepFormData.campoDestino}
                 onChange={(e) =>
                   setStepFormData({
                     ...stepFormData,
-                    configuracion: { ...stepFormData.configuracion, variable: e.target.value },
+                    campoDestino: e.target.value,
                   })
                 }
                 placeholder="nombre_cliente"
@@ -572,31 +558,17 @@ setPlantillas(
             </div>
           </>
         )
-      case "mensaje":
+      case "MENSAJE":
         return (
           <>
             <div className="space-y-2">
-              <Label className="text-foreground text-sm">Texto del Mensaje</Label>
-              <Textarea
-                value={String(stepFormData.configuracion.texto ?? "")}
-                onChange={(e) =>
-                  setStepFormData({
-                    ...stepFormData,
-                    configuracion: { ...stepFormData.configuracion, texto: e.target.value },
-                  })
-                }
-                placeholder="Escribe el mensaje que enviara el bot..."
-                className="bg-input border-border text-sm min-h-[80px]"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label className="text-foreground text-sm">Plantilla (opcional)</Label>
+              <Label className="text-foreground text-sm">Plantilla del Mensaje</Label>
               <Select
-                value={stepFormData.configuracion.plantillaId ? String(stepFormData.configuracion.plantillaId) : "none"}
+                value={stepFormData.plantillaId ? String(stepFormData.plantillaId) : "none"}
                 onValueChange={(value) =>
                   setStepFormData({
                     ...stepFormData,
-                    configuracion: { ...stepFormData.configuracion, plantillaId: value === "none" ? undefined : value },
+                    plantillaId: value === "none" ? undefined : Number(value),
                   })
                 }
               >
@@ -615,17 +587,17 @@ setPlantillas(
             </div>
           </>
         )
-      case "llamada_api":
+      case "LLAMADA_API":
         return (
           <>
             <div className="space-y-2">
               <Label className="text-foreground text-sm">API a llamar</Label>
               <Select
-                value={String(stepFormData.configuracion.apiConfigId ?? "")}
+                value={stepFormData.apiConfigId ? String(stepFormData.apiConfigId) : "none"}
                 onValueChange={(value) =>
                   setStepFormData({
                     ...stepFormData,
-                    configuracion: { ...stepFormData.configuracion, apiConfigId: value },
+                    apiConfigId: value === "none" ? undefined : Number(value),
                   })
                 }
               >
@@ -633,6 +605,7 @@ setPlantillas(
                   <SelectValue placeholder="Seleccionar API..." />
                 </SelectTrigger>
                 <SelectContent className="bg-popover border-border">
+                  <SelectItem value="none">Sin API</SelectItem>
                   {apiConfigs.map((a) => (
                     <SelectItem key={a.id} value={String(a.id)}>
                       {a.nombre}
@@ -642,27 +615,27 @@ setPlantillas(
               </Select>
             </div>
             <div className="space-y-2">
-              <Label className="text-foreground text-sm">Parametros JSON (opcional)</Label>
+              <Label className="text-foreground text-sm">API Mapping (JSON)</Label>
               <Textarea
-                value={String(stepFormData.configuracion.parametros ?? "{}")}
+                value={stepFormData.apiMapping}
                 onChange={(e) =>
                   setStepFormData({
                     ...stepFormData,
-                    configuracion: { ...stepFormData.configuracion, parametros: e.target.value },
+                    apiMapping: e.target.value,
                   })
                 }
-                placeholder='{"key": "value"}'
+                placeholder='{"campo_api": "campo_local"}'
                 className="bg-input border-border text-sm min-h-[80px] font-mono"
               />
             </div>
             <div className="space-y-2">
-              <Label className="text-foreground text-sm">Variable de respuesta</Label>
+              <Label className="text-foreground text-sm">Campo Destino</Label>
               <Input
-                value={String(stepFormData.configuracion.variableRespuesta ?? "")}
+                value={stepFormData.campoDestino}
                 onChange={(e) =>
                   setStepFormData({
                     ...stepFormData,
-                    configuracion: { ...stepFormData.configuracion, variableRespuesta: e.target.value },
+                    campoDestino: e.target.value,
                   })
                 }
                 placeholder="resultado_api"
@@ -671,92 +644,49 @@ setPlantillas(
             </div>
           </>
         )
-      case "derivar_humano":
+      case "DERIVAR_HUMANO":
         return (
           <>
             <div className="space-y-2">
-              <Label className="text-foreground text-sm">Motivo de derivacion</Label>
-              <Textarea
-                value={String(stepFormData.configuracion.motivo ?? "")}
-                onChange={(e) =>
-                  setStepFormData({
-                    ...stepFormData,
-                    configuracion: { ...stepFormData.configuracion, motivo: e.target.value },
-                  })
-                }
-                placeholder="Describir el motivo de la derivacion..."
-                className="bg-input border-border text-sm min-h-[80px]"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label className="text-foreground text-sm">Mensaje al cliente</Label>
-              <Textarea
-                value={String(stepFormData.configuracion.mensajeCliente ?? "")}
-                onChange={(e) =>
-                  setStepFormData({
-                    ...stepFormData,
-                    configuracion: { ...stepFormData.configuracion, mensajeCliente: e.target.value },
-                  })
-                }
-                placeholder="Te conectaremos con un asesor..."
-                className="bg-input border-border text-sm min-h-[60px]"
-              />
-            </div>
-          </>
-        )
-      case "condicion":
-        return (
-          <>
-            <div className="space-y-2">
-              <Label className="text-foreground text-sm">Variable a evaluar</Label>
-              <Input
-                value={String(stepFormData.configuracion.variable ?? "")}
-                onChange={(e) =>
-                  setStepFormData({
-                    ...stepFormData,
-                    configuracion: { ...stepFormData.configuracion, variable: e.target.value },
-                  })
-                }
-                placeholder="nombre_cliente"
-                className="bg-input border-border text-sm"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label className="text-foreground text-sm">Operador</Label>
+              <Label className="text-foreground text-sm">Plantilla de mensaje (opcional)</Label>
               <Select
-                value={String(stepFormData.configuracion.operador ?? "igual")}
+                value={stepFormData.plantillaId ? String(stepFormData.plantillaId) : "none"}
                 onValueChange={(value) =>
                   setStepFormData({
                     ...stepFormData,
-                    configuracion: { ...stepFormData.configuracion, operador: value },
+                    plantillaId: value === "none" ? undefined : Number(value),
                   })
                 }
               >
                 <SelectTrigger className="bg-input border-border text-sm">
-                  <SelectValue />
+                  <SelectValue placeholder="Seleccionar plantilla..." />
                 </SelectTrigger>
                 <SelectContent className="bg-popover border-border">
-                  <SelectItem value="igual">Igual a</SelectItem>
-                  <SelectItem value="diferente">Diferente de</SelectItem>
-                  <SelectItem value="contiene">Contiene</SelectItem>
-                  <SelectItem value="mayor">Mayor que</SelectItem>
-                  <SelectItem value="menor">Menor que</SelectItem>
-                  <SelectItem value="vacio">Esta vacio</SelectItem>
-                  <SelectItem value="no_vacio">No esta vacio</SelectItem>
+                  <SelectItem value="none">Sin plantilla</SelectItem>
+                  {plantillas.map((p) => (
+                    <SelectItem key={p.id} value={String(p.id)}>
+                      {p.codigo}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
+          </>
+        )
+      case "CONDICION":
+        return (
+          <>
             <div className="space-y-2">
-              <Label className="text-foreground text-sm">Valor a comparar</Label>
+              <Label className="text-foreground text-sm">Campo Destino (variable a evaluar)</Label>
               <Input
-                value={String(stepFormData.configuracion.valor ?? "")}
+                value={stepFormData.campoDestino}
                 onChange={(e) =>
                   setStepFormData({
                     ...stepFormData,
-                    configuracion: { ...stepFormData.configuracion, valor: e.target.value },
+                    campoDestino: e.target.value,
                   })
                 }
-                placeholder="valor_esperado"
+                placeholder="nombre_cliente"
                 className="bg-input border-border text-sm"
               />
             </div>
@@ -842,20 +772,18 @@ setPlantillas(
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="space-y-2">
-                <Label className="text-foreground text-sm">Nombre del Paso</Label>
-                <Input
-                  value={stepFormData.nombre}
-                  onChange={(e) => setStepFormData({ ...stepFormData, nombre: e.target.value })}
-                  placeholder="Ej: Preguntar nombre"
-                  className="bg-input border-border text-sm"
-                />
-              </div>
-              <div className="space-y-2">
                 <Label className="text-foreground text-sm">Tipo de Paso</Label>
                 <Select
-                  value={stepFormData.tipoStep}
+                  value={stepFormData.tipo}
                   onValueChange={(value) =>
-                    setStepFormData({ ...stepFormData, tipoStep: value, configuracion: {} })
+                    setStepFormData({ 
+                      ...stepFormData, 
+                      tipo: value, 
+                      plantillaId: undefined,
+                      campoDestino: "",
+                      apiConfigId: undefined,
+                      apiMapping: "",
+                    })
                   }
                 >
                   <SelectTrigger className="bg-input border-border text-sm">
@@ -874,13 +802,6 @@ setPlantillas(
                 </Select>
               </div>
               {renderStepConfigForm()}
-              <div className="flex items-center gap-2">
-                <Switch
-                  checked={stepFormData.activo}
-                  onCheckedChange={(checked) => setStepFormData({ ...stepFormData, activo: checked })}
-                />
-                <Label className="text-foreground text-sm">Paso activo</Label>
-              </div>
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setIsStepDialogOpen(false)}>

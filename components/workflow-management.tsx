@@ -82,11 +82,13 @@ import {
 
 interface Workflow {
   id: number
+  empresaId: number
   nombre: string
   descripcion: string
-  empresaId: number
-  empresaNombre?: string
+  palabraClave: string
+  requiereAsignacionHumana: boolean
   activo: boolean
+  empresaNombre?: string
   fechaCreacion: string
 }
 
@@ -199,9 +201,11 @@ export function WorkflowManagement() {
   const [editingWorkflow, setEditingWorkflow] = useState<Workflow | null>(null)
   const [deleteWorkflowId, setDeleteWorkflowId] = useState<number | null>(null)
   const [formData, setFormData] = useState({
+    empresaId: "",
     nombre: "",
     descripcion: "",
-    empresaId: "",
+    palabraClave: "",
+    requiereAsignacionHumana: false,
     activo: true,
   })
 
@@ -237,11 +241,13 @@ export function WorkflowManagement() {
       const data = await workflowsApi.porEmpresa(employee.empresaId)
       const mapped: Workflow[] = (data as Record<string, unknown>[]).map((w) => ({
         id: Number(w.id),
+        empresaId: Number(w.empresaId ?? 0),
         nombre: String(w.nombre ?? ""),
         descripcion: String(w.descripcion ?? ""),
-        empresaId: Number(w.empresaId ?? 0),
-        empresaNombre: w.empresa ? String((w.empresa as Record<string, unknown>).nombre ?? "") : undefined,
+        palabraClave: String(w.palabraClave ?? ""),
+        requiereAsignacionHumana: Boolean(w.requiereAsignacionHumana),
         activo: Boolean(w.activo),
+        empresaNombre: w.empresa ? String((w.empresa as Record<string, unknown>).nombre ?? "") : undefined,
         fechaCreacion: String(w.fechaCreacion ?? ""),
       }))
       setWorkflows(mapped)
@@ -323,14 +329,16 @@ export function WorkflowManagement() {
     if (workflow) {
       setEditingWorkflow(workflow)
       setFormData({
+        empresaId: String(workflow.empresaId),
         nombre: workflow.nombre,
         descripcion: workflow.descripcion,
-        empresaId: String(workflow.empresaId),
+        palabraClave: workflow.palabraClave,
+        requiereAsignacionHumana: workflow.requiereAsignacionHumana,
         activo: workflow.activo,
       })
     } else {
       setEditingWorkflow(null)
-      setFormData({ nombre: "", descripcion: "", empresaId: "", activo: true })
+      setFormData({ empresaId: "", nombre: "", descripcion: "", palabraClave: "", requiereAsignacionHumana: false, activo: true })
     }
     setIsDialogOpen(true)
   }
@@ -340,20 +348,28 @@ export function WorkflowManagement() {
       toast.error("El nombre es obligatorio")
       return
     }
+    if (!formData.palabraClave.trim()) {
+      toast.error("La palabra clave es obligatoria")
+      return
+    }
     try {
       if (editingWorkflow) {
         await workflowsApi.actualizar(editingWorkflow.id, {
+          empresaId: formData.empresaId ? Number(formData.empresaId) : undefined,
           nombre: formData.nombre,
           descripcion: formData.descripcion,
-          empresaId: formData.empresaId ? Number(formData.empresaId) : undefined,
+          palabraClave: formData.palabraClave,
+          requiereAsignacionHumana: formData.requiereAsignacionHumana,
           activo: formData.activo,
         })
         toast.success("Workflow actualizado")
       } else {
         await workflowsApi.crear({
+          empresaId: employee?.empresaId ?? (formData.empresaId ? Number(formData.empresaId) : 0),
           nombre: formData.nombre,
           descripcion: formData.descripcion,
-          empresaId: employee?.empresaId ?? (formData.empresaId ? Number(formData.empresaId) : undefined),
+          palabraClave: formData.palabraClave,
+          requiereAsignacionHumana: formData.requiereAsignacionHumana,
           activo: formData.activo,
         })
         toast.success("Workflow creado")
@@ -936,7 +952,8 @@ export function WorkflowManagement() {
             <TableHeader>
               <TableRow className="border-border hover:bg-transparent">
                 <TableHead className="text-muted-foreground">Nombre</TableHead>
-                <TableHead className="text-muted-foreground hidden md:table-cell">Descripcion</TableHead>
+                <TableHead className="text-muted-foreground hidden md:table-cell">Palabra Clave</TableHead>
+                <TableHead className="text-muted-foreground hidden lg:table-cell">Asignacion</TableHead>
                 <TableHead className="text-muted-foreground">Estado</TableHead>
                 <TableHead className="text-muted-foreground text-right">Acciones</TableHead>
               </TableRow>
@@ -944,13 +961,13 @@ export function WorkflowManagement() {
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
                     Cargando...
                   </TableCell>
                 </TableRow>
               ) : paginatedWorkflows.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
                     No se encontraron workflows
                   </TableCell>
                 </TableRow>
@@ -970,8 +987,15 @@ export function WorkflowManagement() {
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell className="text-muted-foreground text-sm hidden md:table-cell max-w-xs truncate">
-                      {workflow.descripcion || "-"}
+                    <TableCell className="hidden md:table-cell">
+                      <Badge variant="outline" className="font-mono text-xs">
+                        {workflow.palabraClave || "-"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="hidden lg:table-cell">
+                      <Badge variant={workflow.requiereAsignacionHumana ? "default" : "secondary"}>
+                        {workflow.requiereAsignacionHumana ? "Humano" : "Automatico"}
+                      </Badge>
                     </TableCell>
                     <TableCell>
                       <Badge
@@ -1094,6 +1118,25 @@ export function WorkflowManagement() {
                 placeholder="Describe el proposito de este workflow..."
                 className="bg-input border-border text-sm min-h-[80px]"
               />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-foreground text-sm">Palabra Clave</Label>
+              <Input
+                value={formData.palabraClave}
+                onChange={(e) => setFormData({ ...formData, palabraClave: e.target.value })}
+                placeholder="Ej: SOPORTE, VENTAS, AYUDA"
+                className="bg-input border-border text-sm"
+              />
+              <p className="text-xs text-muted-foreground">
+                Palabra que activa este workflow cuando el usuario la escribe
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Switch
+                checked={formData.requiereAsignacionHumana}
+                onCheckedChange={(checked) => setFormData({ ...formData, requiereAsignacionHumana: checked })}
+              />
+              <Label className="text-foreground text-sm">Requiere asignacion humana</Label>
             </div>
             <div className="flex items-center gap-2">
               <Switch

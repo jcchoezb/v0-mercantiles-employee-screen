@@ -856,6 +856,14 @@ export const plantillasMensajeApi = {
     return handleResponse<Record<string, unknown>>(response);
   },
 
+  // GET /api/plantillas-mensaje/empresa/{empresaId}
+  listarPorEmpresa: async (empresaId: number) => {
+    const response = await fetch(`${API_BASE_URL}/plantillas-mensaje/empresa/${empresaId}`, {
+      headers: getAuthHeaders(),
+    });
+    return handleResponse<Record<string, unknown>[]>(response);
+  },
+
   // POST /api/plantillas-mensaje
   crear: async (data: {
     empresaId?: number;

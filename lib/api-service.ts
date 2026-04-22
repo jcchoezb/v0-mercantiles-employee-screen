@@ -656,11 +656,12 @@ export const workflowsApi = {
 
   // POST /api/workflows
   crear: async (data: {
+    empresaId: number;
     nombre: string;
-    descripcion?: string;
-    empresaId?: number;
-    triggerType: string;
-    triggerConfig?: Record<string, unknown>;
+    descripcion: string;
+    palabraClave: string;
+    requiereAsignacionHumana: boolean;
+    activo: boolean;
   }) => {
     const response = await fetch(`${API_BASE_URL}/workflows`, {
       method: "POST",
@@ -672,11 +673,12 @@ export const workflowsApi = {
 
   // PUT /api/workflows/:id
   actualizar: async (id: number, data: {
+    empresaId?: number;
     nombre?: string;
     descripcion?: string;
-    empresaId?: number;
-    triggerType?: string;
-    triggerConfig?: Record<string, unknown>;
+    palabraClave?: string;
+    requiereAsignacionHumana?: boolean;
+    activo?: boolean;
   }) => {
     const response = await fetch(`${API_BASE_URL}/workflows/${id}`, {
       method: "PUT",

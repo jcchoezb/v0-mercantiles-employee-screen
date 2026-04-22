@@ -55,6 +55,10 @@ interface ApiConfig {
   metodoHttp: string
   endpoint: string
   authType: string
+  authValue?: string
+  bodyTemplate: string
+  params: string
+  headers: string
   activo: boolean
   createdAt: string
   updatedAt: string
@@ -69,12 +73,10 @@ const HTTP_METHODS = [
 ]
 
 const AUTH_TYPES = [
-  { value: "none", label: "Sin autenticacion" },
-  { value: "bearer", label: "Bearer Token" },
-  { value: "basic", label: "Basic Auth" },
-  { value: "api_key", label: "API Key" },
-  { value: "api_key_header", label: "API Key (Header)" },
-  { value: "api_key_query", label: "API Key (Query)" },
+  { value: "NONE", label: "Sin autenticacion" },
+  { value: "Bearer", label: "Bearer Token" },
+  { value: "Basic", label: "Basic Auth" },
+  { value: "API_KEY", label: "API Key" },
 ]
 
 const ITEMS_PER_PAGE = 8
@@ -95,9 +97,11 @@ export function ApiConfigManagement() {
     urlBase: "",
     metodoHttp: "GET",
     endpoint: "",
-    authType: "none",
+    authType: "NONE",
     authValue: "",
     bodyTemplate: "",
+    params: "",
+    headers: "",
     activo: true,
   })
 
@@ -113,7 +117,10 @@ export function ApiConfigManagement() {
         urlBase: String(c.urlBase ?? ""),
         metodoHttp: String(c.metodoHttp ?? "GET"),
         endpoint: String(c.endpoint ?? ""),
-        authType: String(c.authType ?? "none"),
+        authType: String(c.authType ?? "NONE"),
+        bodyTemplate: String(c.bodyTemplate ?? ""),
+        params: String(c.params ?? ""),
+        headers: String(c.headers ?? ""),
         activo: Boolean(c.activo),
         createdAt: String(c.createdAt ?? ""),
         updatedAt: String(c.updatedAt ?? ""),
@@ -155,8 +162,10 @@ export function ApiConfigManagement() {
         metodoHttp: config.metodoHttp,
         endpoint: config.endpoint,
         authType: config.authType,
-        authValue: "",
-        bodyTemplate: "",
+        authValue: config.authValue ?? "",
+        bodyTemplate: config.bodyTemplate ?? "",
+        params: config.params ?? "",
+        headers: config.headers ?? "",
         activo: config.activo,
       })
     } else {
@@ -166,9 +175,11 @@ export function ApiConfigManagement() {
         urlBase: "",
         metodoHttp: "GET",
         endpoint: "",
-        authType: "none",
+        authType: "NONE",
         authValue: "",
         bodyTemplate: "",
+        params: "",
+        headers: "",
         activo: true,
       })
     }
@@ -205,13 +216,15 @@ export function ApiConfigManagement() {
         metodoHttp: formData.metodoHttp,
         endpoint: formData.endpoint,
         authType: formData.authType,
-        authValue: formData.authValue,
-        bodyTemplate: formData.bodyTemplate,
+        authValue: formData.authValue || undefined,
+        bodyTemplate: formData.bodyTemplate || undefined,
+        params: formData.params || undefined,
+        headers: formData.headers || undefined,
         activo: formData.activo,
       }
 
       if (editingConfig) {
-        await apiConfigsApi.actualizar(editingConfig.id, payload)
+        await apiConfigsApi.actualizar(editingConfig.id, { ...payload, empresaId: employee?.empresaId })
         toast.success("Configuracion actualizada correctamente")
       } else {
         await apiConfigsApi.crear({ ...payload, empresaId: employee?.empresaId })
@@ -630,17 +643,45 @@ export function ApiConfigManagement() {
                 />
               </div>
             </div>
+            {(formData.metodoHttp === "POST" || formData.metodoHttp === "PUT" || formData.metodoHttp === "PATCH") && (
+              <div className="space-y-2">
+                <Label className="text-foreground text-sm">Body Template (JSON)</Label>
+                <Textarea
+                  value={formData.bodyTemplate}
+                  onChange={(e) => setFormData({ ...formData, bodyTemplate: e.target.value })}
+                  placeholder='{"cedula": "{{cedula}}", "tipo": "natural"}'
+                  className="bg-input border-border text-foreground font-mono text-sm resize-none"
+                  rows={4}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Plantilla del body. Usa {"{{variable}}"} para valores dinamicos del workflow
+                </p>
+              </div>
+            )}
             <div className="space-y-2">
-              <Label className="text-foreground text-sm">Body Template (JSON)</Label>
+              <Label className="text-foreground text-sm">Query Params (JSON)</Label>
               <Textarea
-                value={formData.bodyTemplate}
-                onChange={(e) => setFormData({ ...formData, bodyTemplate: e.target.value })}
-                placeholder='{"campo1": "valor1", "campo2": "{{variable}}"}'
+                value={formData.params}
+                onChange={(e) => setFormData({ ...formData, params: e.target.value })}
+                placeholder='{"version": "2.0", "formato": "json"}'
                 className="bg-input border-border text-foreground font-mono text-sm resize-none"
-                rows={4}
+                rows={2}
               />
               <p className="text-xs text-muted-foreground">
-                Plantilla del body para la peticion. Usa {"{{variable}}"} para valores dinamicos
+                Parametros de query string en formato JSON
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-foreground text-sm">Headers Adicionales (JSON)</Label>
+              <Textarea
+                value={formData.headers}
+                onChange={(e) => setFormData({ ...formData, headers: e.target.value })}
+                placeholder='{"X-Correlation-ID": "{{uuid}}", "Accept-Language": "es-EC"}'
+                className="bg-input border-border text-foreground font-mono text-sm resize-none"
+                rows={2}
+              />
+              <p className="text-xs text-muted-foreground">
+                Headers personalizados adicionales en formato JSON
               </p>
             </div>
             <div className="flex items-center gap-2">

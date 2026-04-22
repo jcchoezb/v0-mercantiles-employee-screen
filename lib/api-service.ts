@@ -756,16 +756,12 @@ export const workflowStepsApi = {
   // POST /api/workflow-steps
   crear: async (data: {
     workflowId: number;
-    tipo: string;
-    nombre: string;
     orden: number;
-    config?: Record<string, unknown>;
-    plantillaMensajeId?: number;
+    tipo: string;
+    plantillaId?: number;
+    campoDestino?: string;
     apiConfigId?: number;
-    condicion?: string;
-    siguientePasoId?: number;
-    siguientePasoSiId?: number;
-    siguientePasoNoId?: number;
+    apiMapping?: string;
   }) => {
     const response = await fetch(`${API_BASE_URL}/workflow-steps`, {
       method: "POST",
@@ -777,16 +773,13 @@ export const workflowStepsApi = {
 
   // PUT /api/workflow-steps/:id
   actualizar: async (id: number, data: {
-    tipo?: string;
-    nombre?: string;
+    workflowId?: number;
     orden?: number;
-    config?: Record<string, unknown>;
-    plantillaMensajeId?: number;
+    tipo?: string;
+    plantillaId?: number;
+    campoDestino?: string;
     apiConfigId?: number;
-    condicion?: string;
-    siguientePasoId?: number;
-    siguientePasoSiId?: number;
-    siguientePasoNoId?: number;
+    apiMapping?: string;
   }) => {
     const response = await fetch(`${API_BASE_URL}/workflow-steps/${id}`, {
       method: "PUT",

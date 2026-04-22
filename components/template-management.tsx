@@ -92,9 +92,10 @@ export function TemplateManagement() {
   })
 
   const fetchPlantillas = useCallback(async () => {
+    if (!employee?.empresaId) return
     setIsLoading(true)
     try {
-      const data = await plantillasMensajeApi.listar()
+      const data = await plantillasMensajeApi.listarPorEmpresa(employee.empresaId)
       const mapped: Plantilla[] = (data as Record<string, unknown>[]).map((p) => ({
         id: Number(p.id),
         empresaId: Number(p.empresaId ?? 0),
@@ -112,7 +113,7 @@ export function TemplateManagement() {
     } finally {
       setIsLoading(false)
     }
-  }, [])
+  }, [employee?.empresaId])
 
   useEffect(() => {
     fetchPlantillas()

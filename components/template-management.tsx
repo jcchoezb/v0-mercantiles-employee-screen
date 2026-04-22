@@ -57,24 +57,13 @@ import {
 
 interface Plantilla {
   id: number
-  nombre: string
-  tipo: string
+  codigo: string
   contenido: string
+  esPregunta: boolean
   variables: string[]
   activo: boolean
   fechaCreacion: string
 }
-
-const TIPO_PLANTILLA_OPTIONS = [
-  { value: "saludo", label: "Saludo" },
-  { value: "despedida", label: "Despedida" },
-  { value: "pregunta", label: "Pregunta" },
-  { value: "respuesta", label: "Respuesta" },
-  { value: "error", label: "Error" },
-  { value: "confirmacion", label: "Confirmacion" },
-  { value: "notificacion", label: "Notificacion" },
-  { value: "otro", label: "Otro" },
-]
 
 const ITEMS_PER_PAGE = 10
 
@@ -93,9 +82,9 @@ export function TemplateManagement() {
   const [previewPlantilla, setPreviewPlantilla] = useState<Plantilla | null>(null)
 
   const [formData, setFormData] = useState({
-    nombre: "",
-    tipo: "saludo",
+    codigo: "",
     contenido: "",
+    esPregunta: false,
     activo: true,
   })
 
@@ -105,9 +94,9 @@ export function TemplateManagement() {
       const data = await plantillasMensajeApi.listar()
       const mapped: Plantilla[] = (data as Record<string, unknown>[]).map((p) => ({
         id: Number(p.id),
-        nombre: String(p.nombre ?? ""),
-        tipo: String(p.tipo ?? "otro"),
+        codigo: String(p.codigo ?? ""),
         contenido: String(p.contenido ?? ""),
+        esPregunta: Boolean(p.esPregunta),
         variables: extractVariables(String(p.contenido ?? "")),
         activo: Boolean(p.activo),
         fechaCreacion: String(p.fechaCreacion ?? ""),
@@ -130,12 +119,14 @@ export function TemplateManagement() {
     if (searchTerm) {
       filtered = filtered.filter(
         (p) =>
-          p.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          p.codigo.toLowerCase().includes(searchTerm.toLowerCase()) ||
           p.contenido.toLowerCase().includes(searchTerm.toLowerCase())
       )
     }
-    if (filterTipo !== "all") {
-      filtered = filtered.filter((p) => p.tipo === filterTipo)
+    if (filterTipo === "pregunta") {
+      filtered = filtered.filter((p) => p.esPregunta === true)
+    } else if (filterTipo === "respuesta") {
+      filtered = filtered.filter((p) => p.esPregunta === false)
     }
     setFilteredPlantillas(filtered)
     setCurrentPage(1)
@@ -160,21 +151,21 @@ export function TemplateManagement() {
     if (plantilla) {
       setEditingPlantilla(plantilla)
       setFormData({
-        nombre: plantilla.nombre,
-        tipo: plantilla.tipo,
+        codigo: plantilla.codigo,
         contenido: plantilla.contenido,
+        esPregunta: plantilla.esPregunta,
         activo: plantilla.activo,
       })
     } else {
       setEditingPlantilla(null)
-      setFormData({ nombre: "", tipo: "saludo", contenido: "", activo: true })
+      setFormData({ codigo: "", contenido: "", esPregunta: false, activo: true })
     }
     setIsDialogOpen(true)
   }
 
   const handleSave = async () => {
-    if (!formData.nombre.trim()) {
-      toast.error("El nombre es obligatorio")
+    if (!formData.codigo.trim()) {
+      toast.error("El codigo es obligatorio")
       return
     }
     if (!formData.contenido.trim()) {
@@ -184,18 +175,16 @@ export function TemplateManagement() {
     try {
       if (editingPlantilla) {
         await plantillasMensajeApi.actualizar(editingPlantilla.id, {
-          nombre: formData.nombre,
-          tipo: formData.tipo,
+          codigo: formData.codigo,
           contenido: formData.contenido,
-          activo: formData.activo,
+          esPregunta: formData.esPregunta,
         })
         toast.success("Plantilla actualizada")
       } else {
         await plantillasMensajeApi.crear({
-          nombre: formData.nombre,
-          tipo: formData.tipo,
+          codigo: formData.codigo,
           contenido: formData.contenido,
-          activo: formData.activo,
+          esPregunta: formData.esPregunta,
         })
         toast.success("Plantilla creada")
       }
@@ -238,10 +227,6 @@ export function TemplateManagement() {
     toast.success("Contenido copiado al portapapeles")
   }
 
-  const getTipoLabel = (tipo: string) => {
-    return TIPO_PLANTILLA_OPTIONS.find((t) => t.value === tipo)?.label ?? tipo
-  }
-
   return (
     <div className="p-4 md:p-6 space-y-6">
       {/* Header */}
@@ -274,12 +259,9 @@ export function TemplateManagement() {
             <SelectValue placeholder="Filtrar por tipo" />
           </SelectTrigger>
           <SelectContent className="bg-popover border-border">
-            <SelectItem value="all">Todos los tipos</SelectItem>
-            {TIPO_PLANTILLA_OPTIONS.map((t) => (
-              <SelectItem key={t.value} value={t.value}>
-                {t.label}
-              </SelectItem>
-            ))}
+            <SelectItem value="all">Todos</SelectItem>
+            <SelectItem value="pregunta">Preguntas</SelectItem>
+            <SelectItem value="respuesta">Respuestas</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -290,7 +272,7 @@ export function TemplateManagement() {
           <Table>
             <TableHeader>
               <TableRow className="border-border hover:bg-transparent">
-                <TableHead className="text-muted-foreground">Nombre</TableHead>
+                <TableHead className="text-muted-foreground">Codigo</TableHead>
                 <TableHead className="text-muted-foreground hidden md:table-cell">Tipo</TableHead>
                 <TableHead className="text-muted-foreground hidden lg:table-cell">Variables</TableHead>
                 <TableHead className="text-muted-foreground">Estado</TableHead>
@@ -319,7 +301,7 @@ export function TemplateManagement() {
                           <FileText className="h-4 w-4 text-primary" />
                         </div>
                         <div>
-                          <p className="font-medium text-foreground">{plantilla.nombre}</p>
+                          <p className="font-medium text-foreground">{plantilla.codigo}</p>
                           <p className="text-xs text-muted-foreground truncate max-w-[200px]">
                             {plantilla.contenido.substring(0, 50)}...
                           </p>
@@ -327,7 +309,9 @@ export function TemplateManagement() {
                       </div>
                     </TableCell>
                     <TableCell className="hidden md:table-cell">
-                      <Badge variant="outline">{getTipoLabel(plantilla.tipo)}</Badge>
+                      <Badge variant={plantilla.esPregunta ? "default" : "secondary"}>
+                        {plantilla.esPregunta ? "Pregunta" : "Respuesta"}
+                      </Badge>
                     </TableCell>
                     <TableCell className="hidden lg:table-cell">
                       {plantilla.variables.length > 0 ? (
@@ -450,34 +434,21 @@ export function TemplateManagement() {
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label className="text-foreground text-sm">Nombre</Label>
-                <Input
-                  value={formData.nombre}
-                  onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
-                  placeholder="Ej: Saludo inicial"
-                  className="bg-input border-border text-sm"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-foreground text-sm">Tipo</Label>
-                <Select
-                  value={formData.tipo}
-                  onValueChange={(value) => setFormData({ ...formData, tipo: value })}
-                >
-                  <SelectTrigger className="bg-input border-border text-sm">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="bg-popover border-border">
-                    {TIPO_PLANTILLA_OPTIONS.map((t) => (
-                      <SelectItem key={t.value} value={t.value}>
-                        {t.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+            <div className="space-y-2">
+              <Label className="text-foreground text-sm">Codigo</Label>
+              <Input
+                value={formData.codigo}
+                onChange={(e) => setFormData({ ...formData, codigo: e.target.value })}
+                placeholder="Ej: SALUDO_INICIAL"
+                className="bg-input border-border text-sm"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <Switch
+                checked={formData.esPregunta}
+                onCheckedChange={(checked) => setFormData({ ...formData, esPregunta: checked })}
+              />
+              <Label className="text-foreground text-sm">Es una pregunta</Label>
             </div>
             <div className="space-y-2">
               <Label className="text-foreground text-sm">Contenido</Label>
@@ -526,14 +497,16 @@ export function TemplateManagement() {
       <Dialog open={!!previewPlantilla} onOpenChange={() => setPreviewPlantilla(null)}>
         <DialogContent className="bg-card border-border sm:max-w-[500px]">
           <DialogHeader>
-            <DialogTitle className="text-foreground">{previewPlantilla?.nombre}</DialogTitle>
+            <DialogTitle className="text-foreground">{previewPlantilla?.codigo}</DialogTitle>
             <DialogDescription className="text-muted-foreground">
               Vista previa de la plantilla
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="flex items-center gap-2">
-              <Badge variant="outline">{getTipoLabel(previewPlantilla?.tipo ?? "")}</Badge>
+              <Badge variant={previewPlantilla?.esPregunta ? "default" : "secondary"}>
+                {previewPlantilla?.esPregunta ? "Pregunta" : "Respuesta"}
+              </Badge>
               <Badge variant={previewPlantilla?.activo ? "default" : "secondary"}>
                 {previewPlantilla?.activo ? "Activa" : "Inactiva"}
               </Badge>

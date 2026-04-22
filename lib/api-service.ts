@@ -858,9 +858,11 @@ export const plantillasMensajeApi = {
 
   // POST /api/plantillas-mensaje
   crear: async (data: {
+    empresaId?: number;
     codigo: string;
     contenido: string;
     esPregunta: boolean;
+    activo?: boolean;
   }) => {
     const response = await fetch(`${API_BASE_URL}/plantillas-mensaje`, {
       method: "POST",
@@ -872,9 +874,11 @@ export const plantillasMensajeApi = {
 
   // PUT /api/plantillas-mensaje/:id
   actualizar: async (id: number, data: {
+    empresaId?: number;
     codigo?: string;
     contenido?: string;
     esPregunta?: boolean;
+    activo?: boolean;
   }) => {
     const response = await fetch(`${API_BASE_URL}/plantillas-mensaje/${id}`, {
       method: "PUT",

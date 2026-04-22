@@ -95,11 +95,15 @@ interface Workflow {
 interface WorkflowStep {
   id: number
   workflowId: number
+  workflowNombre?: string
   orden: number
   tipo: string
   plantillaId?: number
+  plantillaCodigo?: string
+  plantillaContenido?: string
   campoDestino?: string
   apiConfigId?: number
+  apiConfigNombre?: string
   apiMapping?: string
 }
 
@@ -171,7 +175,13 @@ function SortableStep({
           </Badge>
         </div>
         <p className="text-xs text-muted-foreground truncate">
-          {step.campoDestino ? `Campo: ${step.campoDestino}` : `Orden: ${step.orden}`}
+          {step.plantillaCodigo 
+            ? `Plantilla: ${step.plantillaCodigo}` 
+            : step.campoDestino 
+              ? `Campo: ${step.campoDestino}` 
+              : step.apiConfigNombre 
+                ? `API: ${step.apiConfigNombre}` 
+                : `Tipo: ${stepType?.label ?? step.tipo}`}
         </p>
       </div>
       <div className="flex items-center gap-2">
@@ -264,11 +274,15 @@ export function WorkflowManagement() {
       const mapped: WorkflowStep[] = (data as Record<string, unknown>[]).map((s) => ({
         id: Number(s.id),
         workflowId: Number(s.workflowId),
+        workflowNombre: s.workflowNombre ? String(s.workflowNombre) : undefined,
         orden: Number(s.orden ?? 0),
         tipo: String(s.tipo ?? "PREGUNTA"),
         plantillaId: s.plantillaId ? Number(s.plantillaId) : undefined,
+        plantillaCodigo: s.plantillaCodigo ? String(s.plantillaCodigo) : undefined,
+        plantillaContenido: s.plantillaContenido ? String(s.plantillaContenido) : undefined,
         campoDestino: s.campoDestino ? String(s.campoDestino) : undefined,
         apiConfigId: s.apiConfigId ? Number(s.apiConfigId) : undefined,
+        apiConfigNombre: s.apiConfigNombre ? String(s.apiConfigNombre) : undefined,
         apiMapping: s.apiMapping ? String(s.apiMapping) : undefined,
       }))
       mapped.sort((a, b) => a.orden - b.orden)
@@ -502,7 +516,15 @@ setPlantillas(
     try {
       await Promise.all(
         newSteps.map((step, index) =>
-          workflowStepsApi.actualizar(step.id, { orden: index + 1 })
+          workflowStepsApi.actualizar(step.id, {
+            workflowId: selectedWorkflow.id,
+            orden: index + 1,
+            tipo: step.tipo,
+            plantillaId: step.plantillaId,
+            campoDestino: step.campoDestino,
+            apiConfigId: step.apiConfigId,
+            apiMapping: step.apiMapping,
+          })
         )
       )
       toast.success("Orden actualizado")

@@ -109,9 +109,9 @@ interface ApiConfig {
 
 interface Plantilla {
   id: number
-  nombre: string
+  codigo: string
   contenido: string
-}
+  }
 
 const STEP_TYPES = [
   { value: "pregunta", label: "Pregunta", icon: MessageSquare, color: "bg-blue-500" },
@@ -261,7 +261,7 @@ export function WorkflowManagement() {
 
   const fetchSteps = useCallback(async (workflowId: number) => {
     try {
-      const data = await workflowStepsApi.listarPorWorkflow(workflowId)
+      const data = await workflowStepsApi.porWorkflow(workflowId)
       const mapped: WorkflowStep[] = (data as Record<string, unknown>[]).map((s) => ({
         id: Number(s.id),
         workflowId: Number(s.workflowId),
@@ -290,13 +290,13 @@ export function WorkflowManagement() {
           nombre: String(a.nombre ?? ""),
         }))
       )
-      setPlantillas(
-        (plantillasData as Record<string, unknown>[]).map((p) => ({
-          id: Number(p.id),
-          nombre: String(p.nombre ?? ""),
-          contenido: String(p.contenido ?? ""),
-        }))
-      )
+setPlantillas(
+  (plantillasData as Record<string, unknown>[]).map((p) => ({
+  id: Number(p.id),
+  codigo: String(p.codigo ?? ""),
+  contenido: String(p.contenido ?? ""),
+  }))
+  )
     } catch {
       // silently fail
     }
@@ -533,11 +533,11 @@ export function WorkflowManagement() {
             <div className="space-y-2">
               <Label className="text-foreground text-sm">Plantilla (opcional)</Label>
               <Select
-                value={String(stepFormData.configuracion.plantillaId ?? "")}
+                value={stepFormData.configuracion.plantillaId ? String(stepFormData.configuracion.plantillaId) : "none"}
                 onValueChange={(value) =>
                   setStepFormData({
                     ...stepFormData,
-                    configuracion: { ...stepFormData.configuracion, plantillaId: value },
+                    configuracion: { ...stepFormData.configuracion, plantillaId: value === "none" ? undefined : value },
                   })
                 }
               >
@@ -545,10 +545,10 @@ export function WorkflowManagement() {
                   <SelectValue placeholder="Seleccionar plantilla..." />
                 </SelectTrigger>
                 <SelectContent className="bg-popover border-border">
-                  <SelectItem value="">Sin plantilla</SelectItem>
+                  <SelectItem value="none">Sin plantilla</SelectItem>
                   {plantillas.map((p) => (
                     <SelectItem key={p.id} value={String(p.id)}>
-                      {p.nombre}
+                      {p.codigo}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -590,11 +590,11 @@ export function WorkflowManagement() {
             <div className="space-y-2">
               <Label className="text-foreground text-sm">Plantilla (opcional)</Label>
               <Select
-                value={String(stepFormData.configuracion.plantillaId ?? "")}
+                value={stepFormData.configuracion.plantillaId ? String(stepFormData.configuracion.plantillaId) : "none"}
                 onValueChange={(value) =>
                   setStepFormData({
                     ...stepFormData,
-                    configuracion: { ...stepFormData.configuracion, plantillaId: value },
+                    configuracion: { ...stepFormData.configuracion, plantillaId: value === "none" ? undefined : value },
                   })
                 }
               >
@@ -602,10 +602,10 @@ export function WorkflowManagement() {
                   <SelectValue placeholder="Seleccionar plantilla..." />
                 </SelectTrigger>
                 <SelectContent className="bg-popover border-border">
-                  <SelectItem value="">Sin plantilla</SelectItem>
+                  <SelectItem value="none">Sin plantilla</SelectItem>
                   {plantillas.map((p) => (
                     <SelectItem key={p.id} value={String(p.id)}>
-                      {p.nombre}
+                      {p.codigo}
                     </SelectItem>
                   ))}
                 </SelectContent>

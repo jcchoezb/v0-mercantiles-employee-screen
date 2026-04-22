@@ -96,10 +96,11 @@ interface WorkflowStep {
   id: number
   workflowId: number
   orden: number
-  tipoStep: string
-  nombre: string
-  configuracion: Record<string, unknown>
-  activo: boolean
+  tipo: string
+  plantillaId?: number
+  campoDestino?: string
+  apiConfigId?: number
+  apiMapping?: string
 }
 
 interface ApiConfig {
@@ -114,11 +115,11 @@ interface Plantilla {
   }
 
 const STEP_TYPES = [
-  { value: "pregunta", label: "Pregunta", icon: MessageSquare, color: "bg-blue-500" },
-  { value: "mensaje", label: "Mensaje", icon: MessageSquare, color: "bg-green-500" },
-  { value: "llamada_api", label: "Llamada API", icon: Globe, color: "bg-purple-500" },
-  { value: "derivar_humano", label: "Derivar a Humano", icon: UserCheck, color: "bg-orange-500" },
-  { value: "condicion", label: "Condicion", icon: GitBranch, color: "bg-yellow-500" },
+  { value: "PREGUNTA", label: "Pregunta", icon: MessageSquare, color: "bg-blue-500" },
+  { value: "MENSAJE", label: "Mensaje", icon: MessageSquare, color: "bg-green-500" },
+  { value: "LLAMADA_API", label: "Llamada API", icon: Globe, color: "bg-purple-500" },
+  { value: "DERIVAR_HUMANO", label: "Derivar a Humano", icon: UserCheck, color: "bg-orange-500" },
+  { value: "CONDICION", label: "Condicion", icon: GitBranch, color: "bg-yellow-500" },
 ]
 
 const ITEMS_PER_PAGE = 10
@@ -143,7 +144,7 @@ function SortableStep({
     opacity: isDragging ? 0.5 : 1,
   }
 
-  const stepType = STEP_TYPES.find((t) => t.value === step.tipoStep)
+  const stepType = STEP_TYPES.find((t) => t.value === step.tipo)
   const StepIcon = stepType?.icon ?? Zap
 
   return (
@@ -164,19 +165,16 @@ function SortableStep({
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
-          <span className="text-sm font-medium text-foreground">{step.nombre}</span>
+          <span className="text-sm font-medium text-foreground">Paso {step.orden}</span>
           <Badge variant="outline" className="text-xs">
-            {stepType?.label ?? step.tipoStep}
+            {stepType?.label ?? step.tipo}
           </Badge>
         </div>
         <p className="text-xs text-muted-foreground truncate">
-          Orden: {step.orden}
+          {step.campoDestino ? `Campo: ${step.campoDestino}` : `Orden: ${step.orden}`}
         </p>
       </div>
       <div className="flex items-center gap-2">
-        <Badge variant={step.activo ? "default" : "secondary"} className="text-xs">
-          {step.activo ? "Activo" : "Inactivo"}
-        </Badge>
         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onEdit}>
           <Edit className="h-4 w-4" />
         </Button>
@@ -216,10 +214,11 @@ export function WorkflowManagement() {
   const [editingStep, setEditingStep] = useState<WorkflowStep | null>(null)
   const [deleteStepId, setDeleteStepId] = useState<number | null>(null)
   const [stepFormData, setStepFormData] = useState({
-    tipoStep: "pregunta",
-    nombre: "",
-    configuracion: {} as Record<string, unknown>,
-    activo: true,
+    tipo: "PREGUNTA",
+    plantillaId: undefined as number | undefined,
+    campoDestino: "",
+    apiConfigId: undefined as number | undefined,
+    apiMapping: "",
   })
 
   // Options for selects
@@ -266,10 +265,11 @@ export function WorkflowManagement() {
         id: Number(s.id),
         workflowId: Number(s.workflowId),
         orden: Number(s.orden ?? 0),
-        tipoStep: String(s.tipoStep ?? ""),
-        nombre: String(s.nombre ?? ""),
-        configuracion: (s.configuracion as Record<string, unknown>) ?? {},
-        activo: Boolean(s.activo),
+        tipo: String(s.tipo ?? "PREGUNTA"),
+        plantillaId: s.plantillaId ? Number(s.plantillaId) : undefined,
+        campoDestino: s.campoDestino ? String(s.campoDestino) : undefined,
+        apiConfigId: s.apiConfigId ? Number(s.apiConfigId) : undefined,
+        apiMapping: s.apiMapping ? String(s.apiMapping) : undefined,
       }))
       mapped.sort((a, b) => a.orden - b.orden)
       setSteps(mapped)
@@ -423,18 +423,20 @@ setPlantillas(
     if (step) {
       setEditingStep(step)
       setStepFormData({
-        tipoStep: step.tipoStep,
-        nombre: step.nombre,
-        configuracion: step.configuracion,
-        activo: step.activo,
+        tipo: step.tipo,
+        plantillaId: step.plantillaId,
+        campoDestino: step.campoDestino ?? "",
+        apiConfigId: step.apiConfigId,
+        apiMapping: step.apiMapping ?? "",
       })
     } else {
       setEditingStep(null)
       setStepFormData({
-        tipoStep: "pregunta",
-        nombre: "",
-        configuracion: {},
-        activo: true,
+        tipo: "PREGUNTA",
+        plantillaId: undefined,
+        campoDestino: "",
+        apiConfigId: undefined,
+        apiMapping: "",
       })
     }
     setIsStepDialogOpen(true)

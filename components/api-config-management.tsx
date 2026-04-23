@@ -229,7 +229,6 @@ export function ApiConfigManagement() {
         responseTemplate: formData.responseTemplate || undefined,
         activo: formData.activo,
       }
-
       if (editingConfig) {
         await apiConfigsApi.actualizar(editingConfig.id, { ...payload, empresaId: employee?.empresaId })
         toast.success("Configuracion actualizada correctamente")

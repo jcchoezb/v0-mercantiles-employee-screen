@@ -59,6 +59,7 @@ interface ApiConfig {
   bodyTemplate: string
   params: string
   headers: string
+  responseMapping: string
   activo: boolean
   createdAt: string
   updatedAt: string
@@ -102,6 +103,7 @@ export function ApiConfigManagement() {
     bodyTemplate: "",
     params: "",
     headers: "",
+    responseMapping: "",
     activo: true,
   })
 
@@ -121,6 +123,7 @@ export function ApiConfigManagement() {
         bodyTemplate: String(c.bodyTemplate ?? ""),
         params: String(c.params ?? ""),
         headers: String(c.headers ?? ""),
+        responseMapping: String(c.responseMapping ?? ""),
         activo: Boolean(c.activo),
         createdAt: String(c.createdAt ?? ""),
         updatedAt: String(c.updatedAt ?? ""),
@@ -166,6 +169,7 @@ export function ApiConfigManagement() {
         bodyTemplate: config.bodyTemplate ?? "",
         params: config.params ?? "",
         headers: config.headers ?? "",
+        responseMapping: config.responseMapping ?? "",
         activo: config.activo,
       })
     } else {
@@ -180,6 +184,7 @@ export function ApiConfigManagement() {
         bodyTemplate: "",
         params: "",
         headers: "",
+        responseMapping: "",
         activo: true,
       })
     }
@@ -220,6 +225,7 @@ export function ApiConfigManagement() {
         bodyTemplate: formData.bodyTemplate || undefined,
         params: formData.params || undefined,
         headers: formData.headers || undefined,
+        responseMapping: formData.responseMapping || undefined,
         activo: formData.activo,
       }
 
@@ -682,6 +688,19 @@ export function ApiConfigManagement() {
               />
               <p className="text-xs text-muted-foreground">
                 Headers personalizados adicionales en formato JSON
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-foreground text-sm">Mapeo de Response (JSON)</Label>
+              <Textarea
+                value={formData.responseMapping}
+                onChange={(e) => setFormData({ ...formData, responseMapping: e.target.value })}
+                placeholder='{"nombre": "data.nombre", "cedula": "data.identificacion", "estado": "status"}'
+                className="bg-input border-border text-foreground font-mono text-sm resize-none"
+                rows={3}
+              />
+              <p className="text-xs text-muted-foreground">
+                Define como extraer datos del response. Formato: {"{ \"variable_local\": \"ruta.en.response\" }"}
               </p>
             </div>
             <div className="flex items-center gap-2">

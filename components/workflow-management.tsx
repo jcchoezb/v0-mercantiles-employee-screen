@@ -78,6 +78,7 @@ import {
   ArrowLeft,
   Settings,
   Zap,
+  ArrowDownUp,
 } from "lucide-react"
 
 interface Workflow {
@@ -113,6 +114,7 @@ interface ApiConfig {
   metodoHttp: string
   endpoint: string
   bodyTemplate: string
+  responseMapping: string
 }
 
 interface ApiMappingField {
@@ -240,6 +242,7 @@ export function WorkflowManagement() {
     apiMapping: "",
   })
   const [apiMappingFields, setApiMappingFields] = useState<ApiMappingField[]>([])
+  const [responseMappingFields, setResponseMappingFields] = useState<ApiMappingField[]>([])
 
   // Options for selects
   const [apiConfigs, setApiConfigs] = useState<ApiConfig[]>([])
@@ -315,6 +318,7 @@ export function WorkflowManagement() {
           metodoHttp: String(a.metodoHttp ?? "GET"),
           endpoint: String(a.endpoint ?? ""),
           bodyTemplate: String(a.bodyTemplate ?? ""),
+          responseMapping: String(a.responseMapping ?? ""),
         }))
       )
 setPlantillas(
@@ -472,6 +476,27 @@ setPlantillas(
       } else {
         setApiMappingFields([])
       }
+      // Parsear responseMapping de la API seleccionada
+      if (step.apiConfigId) {
+        const api = apiConfigs.find((a) => a.id === step.apiConfigId)
+        if (api && api.responseMapping) {
+          try {
+            const parsed = JSON.parse(api.responseMapping)
+            const fields: ApiMappingField[] = Object.entries(parsed).map(([campo, valor]) => ({
+              campo,
+              tipo: "fijo" as const,
+              valor: step.campoDestino ? String(step.campoDestino) : "",
+            }))
+            setResponseMappingFields(fields)
+          } catch {
+            setResponseMappingFields([])
+          }
+        } else {
+          setResponseMappingFields([])
+        }
+      } else {
+        setResponseMappingFields([])
+      }
     } else {
       setEditingStep(null)
       setStepFormData({
@@ -482,6 +507,7 @@ setPlantillas(
         apiMapping: "",
       })
       setApiMappingFields([])
+      setResponseMappingFields([])
     }
     setIsStepDialogOpen(true)
   }
@@ -501,13 +527,25 @@ setPlantillas(
         finalApiMapping = JSON.stringify(mappingObj)
       }
 
+      // Construir campoDestino desde responseMapping si es LLAMADA_API
+      let finalCampoDestino = stepFormData.campoDestino
+      if (stepFormData.tipo === "LLAMADA_API" && responseMappingFields.length > 0) {
+        const responseMappingObj: Record<string, string> = {}
+        responseMappingFields.forEach((field) => {
+          if (field.valor) {
+            responseMappingObj[field.campo] = field.tipo === "variable" ? `$${field.valor}` : field.valor
+          }
+        })
+        finalCampoDestino = JSON.stringify(responseMappingObj)
+      }
+
       if (editingStep) {
         await workflowStepsApi.actualizar(editingStep.id, {
           workflowId: selectedWorkflow.id,
           orden: editingStep.orden,
           tipo: stepFormData.tipo,
           plantillaId: stepFormData.plantillaId,
-          campoDestino: stepFormData.campoDestino || undefined,
+          campoDestino: finalCampoDestino || undefined,
           apiConfigId: stepFormData.apiConfigId,
           apiMapping: finalApiMapping || undefined,
         })
@@ -519,7 +557,7 @@ setPlantillas(
           orden: newOrden,
           tipo: stepFormData.tipo,
           plantillaId: stepFormData.plantillaId,
-          campoDestino: stepFormData.campoDestino || undefined,
+          campoDestino: finalCampoDestino || undefined,
           apiConfigId: stepFormData.apiConfigId,
           apiMapping: finalApiMapping || undefined,
         })
@@ -685,6 +723,7 @@ setPlantillas(
           
           if (newApiId) {
             const api = apiConfigs.find((a) => a.id === newApiId)
+            // Parsear bodyTemplate
             if (api && api.bodyTemplate) {
               const campos = parseBodyTemplate(api.bodyTemplate)
               setApiMappingFields(
@@ -697,8 +736,22 @@ setPlantillas(
             } else {
               setApiMappingFields([])
             }
+            // Parsear responseMapping
+            if (api && api.responseMapping) {
+              const camposResponse = parseBodyTemplate(api.responseMapping)
+              setResponseMappingFields(
+                camposResponse.map((campo) => ({
+                  campo,
+                  tipo: "fijo" as const,
+                  valor: "",
+                }))
+              )
+            } else {
+              setResponseMappingFields([])
+            }
           } else {
             setApiMappingFields([])
+            setResponseMappingFields([])
           }
         }
         
@@ -706,6 +759,12 @@ setPlantillas(
           const newFields = [...apiMappingFields]
           newFields[index] = { ...newFields[index], ...updates }
           setApiMappingFields(newFields)
+        }
+        
+        const updateResponseMappingField = (index: number, updates: Partial<ApiMappingField>) => {
+          const newFields = [...responseMappingFields]
+          newFields[index] = { ...newFields[index], ...updates }
+          setResponseMappingFields(newFields)
         }
         
         return (
@@ -823,23 +882,82 @@ setPlantillas(
               </div>
             )}
             
-            <div className="space-y-2">
-              <Label className="text-foreground text-sm">Campo Destino (guardar respuesta)</Label>
-              <Input
-                value={stepFormData.campoDestino}
-                onChange={(e) =>
-                  setStepFormData({
-                    ...stepFormData,
-                    campoDestino: e.target.value,
-                  })
-                }
-                placeholder="resultado_api"
-                className="bg-input border-border text-sm"
-              />
-              <p className="text-xs text-muted-foreground">
-                Nombre de la variable donde se guardara la respuesta de la API
-              </p>
-            </div>
+            {selectedApi && responseMappingFields.length > 0 && (
+              <div className="space-y-3">
+                <Label className="text-foreground text-sm flex items-center gap-2">
+                  <ArrowDownUp className="h-4 w-4" />
+                  Mapeo de Response
+                </Label>
+                <div className="space-y-3 p-3 rounded-lg border border-border bg-muted/30">
+                  {responseMappingFields.map((field, index) => (
+                    <div key={field.campo} className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <Label className="text-xs text-muted-foreground font-mono min-w-[120px]">
+                          {field.campo}
+                        </Label>
+                        <Select
+                          value={field.tipo}
+                          onValueChange={(value: "variable" | "fijo") =>
+                            updateResponseMappingField(index, { tipo: value, valor: "" })
+                          }
+                        >
+                          <SelectTrigger className="w-[140px] bg-input border-border text-xs h-8">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent className="bg-popover border-border">
+                            <SelectItem value="variable">Variable</SelectItem>
+                            <SelectItem value="fijo">Valor Fijo</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      
+                      {field.tipo === "variable" ? (
+                        <Select
+                          value={field.valor || "none"}
+                          onValueChange={(value) =>
+                            updateResponseMappingField(index, { valor: value === "none" ? "" : value })
+                          }
+                        >
+                          <SelectTrigger className="bg-input border-border text-sm">
+                            <SelectValue placeholder="Guardar en variable..." />
+                          </SelectTrigger>
+                          <SelectContent className="bg-popover border-border">
+                            <SelectItem value="none">Sin asignar</SelectItem>
+                            {variablesDisponibles.map((v) => (
+                              <SelectItem key={v} value={v}>
+                                <code className="text-xs">${v}</code>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <Input
+                          value={field.valor}
+                          onChange={(e) => updateResponseMappingField(index, { valor: e.target.value })}
+                          placeholder={`Nombre de variable para ${field.campo}`}
+                          className="bg-input border-border text-sm"
+                        />
+                      )}
+                    </div>
+                  ))}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Define donde guardar cada campo del response de la API. 
+                  Usa &quot;Variable&quot; para guardar en una variable existente o &quot;Valor Fijo&quot; para definir un nuevo nombre.
+                </p>
+              </div>
+            )}
+            
+            {selectedApi && responseMappingFields.length === 0 && (
+              <div className="p-4 rounded-lg border border-dashed border-border bg-muted/20 text-center">
+                <p className="text-sm text-muted-foreground">
+                  Esta API no tiene mapeo de response configurado.
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Puedes configurar el mapeo de response en la seccion de APIs Externas.
+                </p>
+              </div>
+            )}
           </>
         )
       case "DERIVAR_HUMANO":

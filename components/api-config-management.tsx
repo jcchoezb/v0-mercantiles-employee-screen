@@ -120,6 +120,7 @@ export function ApiConfigManagement() {
         metodoHttp: String(c.metodoHttp ?? "GET"),
         endpoint: String(c.endpoint ?? ""),
         authType: String(c.authType ?? "NONE"),
+        authValue: c.authValue ? String(c.authValue) : undefined,
         bodyTemplate: String(c.bodyTemplate ?? ""),
         params: String(c.params ?? ""),
         headers: String(c.headers ?? ""),

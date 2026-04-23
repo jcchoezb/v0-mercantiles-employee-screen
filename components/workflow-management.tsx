@@ -882,73 +882,30 @@ setPlantillas(
               </div>
             )}
             
-            {selectedApi && responseMappingFields.length > 0 && (
+            {selectedApi && selectedApi.responseTemplate && (
               <div className="space-y-3">
                 <Label className="text-foreground text-sm flex items-center gap-2">
                   <ArrowDownUp className="h-4 w-4" />
                   Mapeo de Response
                 </Label>
-                <div className="space-y-3 p-3 rounded-lg border border-border bg-muted/30">
-                  {responseMappingFields.map((field, index) => (
-                    <div key={field.campo} className="space-y-2">
-                      <div className="flex items-center gap-2">
-                        <Label className="text-xs text-muted-foreground font-mono min-w-[120px]">
-                          {field.campo}
-                        </Label>
-                        <Select
-                          value={field.tipo}
-                          onValueChange={(value: "variable" | "fijo") =>
-                            updateResponseMappingField(index, { tipo: value, valor: "" })
-                          }
-                        >
-                          <SelectTrigger className="w-[140px] bg-input border-border text-xs h-8">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent className="bg-popover border-border">
-                            <SelectItem value="variable">Variable</SelectItem>
-                            <SelectItem value="fijo">Valor Fijo</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      
-                      {field.tipo === "variable" ? (
-                        <Select
-                          value={field.valor || "none"}
-                          onValueChange={(value) =>
-                            updateResponseMappingField(index, { valor: value === "none" ? "" : value })
-                          }
-                        >
-                          <SelectTrigger className="bg-input border-border text-sm">
-                            <SelectValue placeholder="Guardar en variable..." />
-                          </SelectTrigger>
-                          <SelectContent className="bg-popover border-border">
-                            <SelectItem value="none">Sin asignar</SelectItem>
-                            {variablesDisponibles.map((v) => (
-                              <SelectItem key={v} value={v}>
-                                <code className="text-xs">${v}</code>
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      ) : (
-                        <Input
-                          value={field.valor}
-                          onChange={(e) => updateResponseMappingField(index, { valor: e.target.value })}
-                          placeholder={`Nombre de variable para ${field.campo}`}
-                          className="bg-input border-border text-sm"
-                        />
-                      )}
-                    </div>
-                  ))}
+                <div className="p-3 rounded-lg border border-border bg-muted/30">
+                  <pre className="text-xs text-muted-foreground font-mono whitespace-pre-wrap break-all">
+                    {(() => {
+                      try {
+                        return JSON.stringify(JSON.parse(selectedApi.responseTemplate), null, 2)
+                      } catch {
+                        return selectedApi.responseTemplate
+                      }
+                    })()}
+                  </pre>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Define donde guardar cada campo del response de la API. 
-                  Usa &quot;Variable&quot; para guardar en una variable existente o &quot;Valor Fijo&quot; para definir un nuevo nombre.
+                  Mapeo de response configurado en APIs Externas
                 </p>
               </div>
             )}
             
-            {selectedApi && responseMappingFields.length === 0 && (
+            {selectedApi && !selectedApi.responseTemplate && (
               <div className="p-4 rounded-lg border border-dashed border-border bg-muted/20 text-center">
                 <p className="text-sm text-muted-foreground">
                   Esta API no tiene mapeo de response configurado.

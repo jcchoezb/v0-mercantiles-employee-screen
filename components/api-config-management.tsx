@@ -229,9 +229,6 @@ export function ApiConfigManagement() {
         responseTemplate: formData.responseTemplate || undefined,
         activo: formData.activo,
       }
-      console.log("[v0] formData:", formData)
-      console.log("[v0] payload to send:", payload)
-
       if (editingConfig) {
         await apiConfigsApi.actualizar(editingConfig.id, { ...payload, empresaId: employee?.empresaId })
         toast.success("Configuracion actualizada correctamente")

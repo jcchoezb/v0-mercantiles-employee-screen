@@ -114,7 +114,7 @@ interface ApiConfig {
   metodoHttp: string
   endpoint: string
   bodyTemplate: string
-  responseMapping: string
+  responseTemplate: string
 }
 
 interface ApiMappingField {
@@ -318,7 +318,7 @@ export function WorkflowManagement() {
           metodoHttp: String(a.metodoHttp ?? "GET"),
           endpoint: String(a.endpoint ?? ""),
           bodyTemplate: String(a.bodyTemplate ?? ""),
-          responseMapping: String(a.responseMapping ?? ""),
+          responseTemplate: String(a.responseTemplate ?? ""),
         }))
       )
 setPlantillas(
@@ -476,12 +476,12 @@ setPlantillas(
       } else {
         setApiMappingFields([])
       }
-      // Parsear responseMapping de la API seleccionada
+      // Parsear responseTemplate de la API seleccionada
       if (step.apiConfigId) {
         const api = apiConfigs.find((a) => a.id === step.apiConfigId)
-        if (api && api.responseMapping) {
+        if (api && api.responseTemplate) {
           try {
-            const parsed = JSON.parse(api.responseMapping)
+            const parsed = JSON.parse(api.responseTemplate)
             const fields: ApiMappingField[] = Object.entries(parsed).map(([campo, valor]) => ({
               campo,
               tipo: "fijo" as const,
@@ -736,9 +736,9 @@ setPlantillas(
             } else {
               setApiMappingFields([])
             }
-            // Parsear responseMapping
-            if (api && api.responseMapping) {
-              const camposResponse = parseBodyTemplate(api.responseMapping)
+            // Parsear responseTemplate
+            if (api && api.responseTemplate) {
+              const camposResponse = parseBodyTemplate(api.responseTemplate)
               setResponseMappingFields(
                 camposResponse.map((campo) => ({
                   campo,

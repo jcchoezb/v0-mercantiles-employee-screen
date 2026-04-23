@@ -59,7 +59,7 @@ interface ApiConfig {
   bodyTemplate: string
   params: string
   headers: string
-  responseMapping: string
+  responseTemplate: string
   activo: boolean
   createdAt: string
   updatedAt: string
@@ -103,7 +103,7 @@ export function ApiConfigManagement() {
     bodyTemplate: "",
     params: "",
     headers: "",
-    responseMapping: "",
+    responseTemplate: "",
     activo: true,
   })
 
@@ -123,7 +123,7 @@ export function ApiConfigManagement() {
         bodyTemplate: String(c.bodyTemplate ?? ""),
         params: String(c.params ?? ""),
         headers: String(c.headers ?? ""),
-        responseMapping: String(c.responseMapping ?? ""),
+        responseTemplate: String(c.responseTemplate ?? ""),
         activo: Boolean(c.activo),
         createdAt: String(c.createdAt ?? ""),
         updatedAt: String(c.updatedAt ?? ""),
@@ -169,7 +169,7 @@ export function ApiConfigManagement() {
         bodyTemplate: config.bodyTemplate ?? "",
         params: config.params ?? "",
         headers: config.headers ?? "",
-        responseMapping: config.responseMapping ?? "",
+        responseTemplate: config.responseTemplate ?? "",
         activo: config.activo,
       })
     } else {
@@ -184,7 +184,7 @@ export function ApiConfigManagement() {
         bodyTemplate: "",
         params: "",
         headers: "",
-        responseMapping: "",
+        responseTemplate: "",
         activo: true,
       })
     }
@@ -225,7 +225,7 @@ export function ApiConfigManagement() {
         bodyTemplate: formData.bodyTemplate || undefined,
         params: formData.params || undefined,
         headers: formData.headers || undefined,
-        responseMapping: formData.responseMapping || undefined,
+        responseTemplate: formData.responseTemplate || undefined,
         activo: formData.activo,
       }
 
@@ -693,8 +693,8 @@ export function ApiConfigManagement() {
             <div className="space-y-2">
               <Label className="text-foreground text-sm">Mapeo de Response (JSON)</Label>
               <Textarea
-                value={formData.responseMapping}
-                onChange={(e) => setFormData({ ...formData, responseMapping: e.target.value })}
+                value={formData.responseTemplate}
+                onChange={(e) => setFormData({ ...formData, responseTemplate: e.target.value })}
                 placeholder='{"nombre": "data.nombre", "cedula": "data.identificacion", "estado": "status"}'
                 className="bg-input border-border text-foreground font-mono text-sm resize-none"
                 rows={3}

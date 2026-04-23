@@ -559,7 +559,7 @@ export const apiConfigsApi = {
     bodyTemplate?: string;
     params?: string;
     headers?: string;
-    responseMapping?: string;
+    responseTemplate?: string;
     activo?: boolean;
   }) => {
     const response = await fetch(`${API_BASE_URL}/api-configs`, {
@@ -582,7 +582,7 @@ export const apiConfigsApi = {
     bodyTemplate?: string;
     params?: string;
     headers?: string;
-    responseMapping?: string;
+    responseTemplate?: string;
     activo?: boolean;
   }) => {
     const response = await fetch(`${API_BASE_URL}/api-configs/${id}`, {

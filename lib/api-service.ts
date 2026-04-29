@@ -230,9 +230,11 @@ export const conversacionesApi = {
   },
 
   // PATCH /api/conversaciones/:id/asignar?empleadoId=X
-  asignar: async (id: number, empleadoId: number) => {
+  asignar: async (id: number, data: { empleadoId: number; motivo?: string }) => {
+    const params = new URLSearchParams({ empleadoId: String(data.empleadoId) });
+    if (data.motivo) params.append("motivo", data.motivo);
     const response = await fetch(
-      `${API_BASE_URL}/conversaciones/${id}/asignar?empleadoId=${empleadoId}`,
+      `${API_BASE_URL}/conversaciones/${id}/asignar?${params.toString()}`,
       {
         method: "PATCH",
         headers: getAuthHeadersSimple(),
@@ -327,6 +329,29 @@ export const mensajesApi = {
       headers: getAuthHeaders(),
     });
     return handleResponse<Record<string, unknown>[]>(response);
+  },
+
+  // GET /api/mensajes/conversacion/:conversacionId/chat
+  chat: async (conversacionId: number) => {
+    const response = await fetch(`${API_BASE_URL}/mensajes/conversacion/${conversacionId}/chat`, {
+      headers: getAuthHeaders(),
+    });
+    return handleResponse<Record<string, unknown>[]>(response);
+  },
+
+  // POST /api/mensajes/conversacion/:conversacionId/chat
+  crear: async (conversacionId: number, data: {
+    contenido: string;
+    tipoContenido?: string;
+    remitenteTipo: "empleado" | "cliente" | "bot";
+    remitenteId?: number;
+  }) => {
+    const response = await fetch(`${API_BASE_URL}/mensajes/conversacion/${conversacionId}/chat`, {
+      method: "POST",
+      headers: getAuthHeaders(),
+      body: JSON.stringify(data),
+    });
+    return handleResponse<Record<string, unknown>>(response);
   },
 };
 

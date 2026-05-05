@@ -284,11 +284,11 @@ export function ChatSupport({ autoSelectConvId, onConvSelected }: ChatSupportPro
                       {conv.lastMessage}
                     </p>
                   </div>
-                  {conv.mensajesNoLeidos && conv.mensajesNoLeidos > 0 && (
+                  {typeof conv.mensajesNoLeidos === "number" && conv.mensajesNoLeidos > 0 ? (
                     <span className="absolute bottom-0 right-0 flex h-5 w-5 items-center justify-center rounded-full bg-[#25D366] text-[10px] font-bold text-white shadow-sm">
                       {conv.mensajesNoLeidos > 9 ? "9+" : conv.mensajesNoLeidos}
                     </span>
-                  )}
+                  ) : null}
                 </div>
               </button>
             ))}

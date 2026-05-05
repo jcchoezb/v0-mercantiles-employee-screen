@@ -339,14 +339,14 @@ export const mensajesApi = {
     return handleResponse<Record<string, unknown>[]>(response);
   },
 
-  // POST /api/mensajes/conversacion/:conversacionId/chat
+  // POST /api/mensajes/conversacion/:conversacionId
   crear: async (conversacionId: number, data: {
     contenido: string;
-    tipoContenido?: string;
-    remitenteTipo: "empleado" | "cliente" | "bot";
+    remitenteTipo: "empleado" | "cliente" | "bot" | "sistema";
     remitenteId?: number;
+    tipoEvento?: string;
   }) => {
-    const response = await fetch(`${API_BASE_URL}/mensajes/conversacion/${conversacionId}/chat`, {
+    const response = await fetch(`${API_BASE_URL}/mensajes/conversacion/${conversacionId}`, {
       method: "POST",
       headers: getAuthHeaders(),
       body: JSON.stringify(data),

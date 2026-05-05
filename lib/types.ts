@@ -45,6 +45,7 @@ export interface ChatConversation {
   source: string
   createdAt: string
   lastMessage?: string
+  mensajesNoLeidos?: number
 }
 
 export interface ChatbotRecord {

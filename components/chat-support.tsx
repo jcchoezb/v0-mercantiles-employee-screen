@@ -64,6 +64,7 @@ export function ChatSupport({ autoSelectConvId, onConvSelected }: ChatSupportPro
           source: String(c.canal ?? c.origen ?? ""),
           createdAt: String(c.createdAt ?? c.fechaCreacion ?? new Date().toISOString()),
           lastMessage: String(c.tema ?? ""),
+          mensajesNoLeidos: c.mensajesNoLeidos ? Number(c.mensajesNoLeidos) : 0,
         }
       })
       setConversations(mapped)
@@ -119,11 +120,15 @@ export function ChatSupport({ autoSelectConvId, onConvSelected }: ChatSupportPro
 
   const handleSelectConversation = async (conv: ChatConversation) => {
     const msgs = await fetchMessages(conv.id)
-    setSelectedConversation({ ...conv, messages: msgs })
+    setSelectedConversation({ ...conv, messages: msgs, mensajesNoLeidos: 0 })
     setShowConversationList(false)
     // Mark all messages as read when conversation is opened
     try {
       await mensajesApi.leerTodos(Number(conv.id))
+      // Update conversation list to reflect read messages
+      setConversations((prev) =>
+        prev.map((c) => (c.id === conv.id ? { ...c, mensajesNoLeidos: 0 } : c))
+      )
     } catch {
       // silently fail
     }
@@ -140,9 +145,9 @@ export function ChatSupport({ autoSelectConvId, onConvSelected }: ChatSupportPro
     try {
       await mensajesApi.crear(Number(selectedConversation.id), {
         contenido: newMessage,
-        tipoContenido: "texto",
         remitenteTipo: "empleado",
         remitenteId: Number(employee.id),
+        tipoEvento: "MENSAJE",
       })
 
       const message: ChatMessage = {
@@ -259,14 +264,21 @@ export function ChatSupport({ autoSelectConvId, onConvSelected }: ChatSupportPro
                 )}
               >
                 <div className="flex items-start gap-3">
-                  <Avatar className="h-9 w-9 md:h-10 md:w-10 flex-shrink-0">
-                    <AvatarFallback className="bg-secondary text-secondary-foreground text-xs md:text-sm">
-                      {conv.customer.name
-                        .split(" ")
-                        .map((n) => n[0])
-                        .join("")}
-                    </AvatarFallback>
-                  </Avatar>
+                  <div className="relative flex-shrink-0">
+                    <Avatar className="h-9 w-9 md:h-10 md:w-10">
+                      <AvatarFallback className="bg-secondary text-secondary-foreground text-xs md:text-sm">
+                        {conv.customer.name
+                          .split(" ")
+                          .map((n) => n[0])
+                          .join("")}
+                      </AvatarFallback>
+                    </Avatar>
+                    {conv.mensajesNoLeidos && conv.mensajesNoLeidos > 0 && (
+                      <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-green-500 text-[10px] font-bold text-white">
+                        {conv.mensajesNoLeidos > 99 ? "99+" : conv.mensajesNoLeidos}
+                      </span>
+                    )}
+                  </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between gap-2 mb-1">
                       <span className="font-medium text-foreground text-sm truncate">

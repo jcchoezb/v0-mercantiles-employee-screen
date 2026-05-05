@@ -263,7 +263,7 @@ export function ChatSupport({ autoSelectConvId, onConvSelected }: ChatSupportPro
                     : "hover:bg-secondary"
                 )}
               >
-                <div className="flex items-start gap-3 w-full">
+                <div className="relative flex items-start gap-3 w-full">
                   <Avatar className="h-9 w-9 md:h-10 md:w-10 flex-shrink-0">
                     <AvatarFallback className="bg-secondary text-secondary-foreground text-xs md:text-sm">
                       {conv.customer.name
@@ -277,20 +277,18 @@ export function ChatSupport({ autoSelectConvId, onConvSelected }: ChatSupportPro
                       <span className="font-medium text-foreground text-sm truncate">
                         {conv.customer.name}
                       </span>
-                      <div className="flex items-center gap-2 flex-shrink-0">
-                        {conv.mensajesNoLeidos && conv.mensajesNoLeidos > 0 && (
-                          <span className="flex h-5 min-w-5 px-1.5 items-center justify-center rounded-full bg-[#25D366] text-[11px] font-semibold text-white">
-                            {conv.mensajesNoLeidos > 99 ? "99+" : conv.mensajesNoLeidos}
-                          </span>
-                        )}
-                        {getStatusBadge(conv.status)}
-                      </div>
+                      {getStatusBadge(conv.status)}
                     </div>
                     <p className="text-xs text-muted-foreground truncate">{conv.source}</p>
                     <p className="text-xs text-muted-foreground truncate mt-1">
                       {conv.lastMessage}
                     </p>
                   </div>
+                  {conv.mensajesNoLeidos && conv.mensajesNoLeidos > 0 && (
+                    <span className="absolute bottom-0 right-0 flex h-5 w-5 items-center justify-center rounded-full bg-[#25D366] text-[10px] font-bold text-white shadow-sm">
+                      {conv.mensajesNoLeidos > 9 ? "9+" : conv.mensajesNoLeidos}
+                    </span>
+                  )}
                 </div>
               </button>
             ))}

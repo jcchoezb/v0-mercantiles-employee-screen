@@ -106,6 +106,9 @@ interface WorkflowStep {
   apiConfigId?: number
   apiConfigNombre?: string
   apiMapping?: string
+  validationRegex?: string
+  validationErrorMessage?: string
+  retryOnError?: number
 }
 
 interface ApiConfig {
@@ -240,6 +243,9 @@ export function WorkflowManagement() {
     campoDestino: "",
     apiConfigId: undefined as number | undefined,
     apiMapping: "",
+    validationRegex: "",
+    validationErrorMessage: "",
+    retryOnError: "",
   })
   const [apiMappingFields, setApiMappingFields] = useState<ApiMappingField[]>([])
   const [responseMappingFields, setResponseMappingFields] = useState<ApiMappingField[]>([])
@@ -297,6 +303,9 @@ export function WorkflowManagement() {
         apiConfigId: s.apiConfigId ? Number(s.apiConfigId) : undefined,
         apiConfigNombre: s.apiConfigNombre ? String(s.apiConfigNombre) : undefined,
         apiMapping: s.apiMapping ? String(s.apiMapping) : undefined,
+        validationRegex: s.validationRegex ? String(s.validationRegex) : undefined,
+        validationErrorMessage: s.validationErrorMessage ? String(s.validationErrorMessage) : undefined,
+        retryOnError: s.retryOnError ? Number(s.retryOnError) : undefined,
       }))
       mapped.sort((a, b) => a.orden - b.orden)
       setSteps(mapped)
@@ -459,6 +468,9 @@ setPlantillas(
         campoDestino: step.campoDestino ?? "",
         apiConfigId: step.apiConfigId,
         apiMapping: step.apiMapping ?? "",
+        validationRegex: step.validationRegex ?? "",
+        validationErrorMessage: step.validationErrorMessage ?? "",
+        retryOnError: step.retryOnError ? String(step.retryOnError) : "",
       })
       // Parsear apiMapping existente
       if (step.apiMapping) {
@@ -505,6 +517,9 @@ setPlantillas(
         campoDestino: "",
         apiConfigId: undefined,
         apiMapping: "",
+        validationRegex: "",
+        validationErrorMessage: "",
+        retryOnError: "",
       })
       setApiMappingFields([])
       setResponseMappingFields([])
@@ -539,6 +554,17 @@ setPlantillas(
         finalCampoDestino = JSON.stringify(responseMappingObj)
       }
 
+      // Campos de validación solo para PREGUNTA, null para otros tipos
+      const validationData = stepFormData.tipo === "PREGUNTA" ? {
+        validationRegex: stepFormData.validationRegex || null,
+        validationErrorMessage: stepFormData.validationErrorMessage || null,
+        retryOnError: stepFormData.retryOnError ? Number(stepFormData.retryOnError) : null,
+      } : {
+        validationRegex: null,
+        validationErrorMessage: null,
+        retryOnError: null,
+      }
+
       if (editingStep) {
         await workflowStepsApi.actualizar(editingStep.id, {
           workflowId: selectedWorkflow.id,
@@ -548,6 +574,7 @@ setPlantillas(
           campoDestino: finalCampoDestino || undefined,
           apiConfigId: stepFormData.apiConfigId,
           apiMapping: finalApiMapping || undefined,
+          ...validationData,
         })
         toast.success("Paso actualizado")
       } else {
@@ -560,6 +587,7 @@ setPlantillas(
           campoDestino: finalCampoDestino || undefined,
           apiConfigId: stepFormData.apiConfigId,
           apiMapping: finalApiMapping || undefined,
+          ...validationData,
         })
         toast.success("Paso creado")
       }
@@ -604,6 +632,9 @@ setPlantillas(
             campoDestino: step.campoDestino,
             apiConfigId: step.apiConfigId,
             apiMapping: step.apiMapping,
+            validationRegex: step.validationRegex ?? null,
+            validationErrorMessage: step.validationErrorMessage ?? null,
+            retryOnError: step.retryOnError ?? null,
           })
         )
       )
@@ -657,6 +688,60 @@ setPlantillas(
                 placeholder="nombre_cliente"
                 className="bg-input border-border text-sm"
               />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-foreground text-sm">Expresión Regular de Validación</Label>
+              <Input
+                value={stepFormData.validationRegex}
+                onChange={(e) =>
+                  setStepFormData({
+                    ...stepFormData,
+                    validationRegex: e.target.value,
+                  })
+                }
+                placeholder="^[1-9]$"
+                className="bg-input border-border text-sm font-mono"
+              />
+              <p className="text-xs text-muted-foreground">
+                Regex para validar la respuesta del usuario (opcional)
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-foreground text-sm">Mensaje de Error de Validación</Label>
+              <Input
+                value={stepFormData.validationErrorMessage}
+                onChange={(e) =>
+                  setStepFormData({
+                    ...stepFormData,
+                    validationErrorMessage: e.target.value,
+                  })
+                }
+                placeholder="Opción inválida. Ingresa un número del 1 al 9."
+                className="bg-input border-border text-sm"
+              />
+              <p className="text-xs text-muted-foreground">
+                Mensaje a mostrar cuando la validación falla (opcional)
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-foreground text-sm">Reintentos en Error</Label>
+              <Input
+                type="number"
+                min="0"
+                max="10"
+                value={stepFormData.retryOnError}
+                onChange={(e) =>
+                  setStepFormData({
+                    ...stepFormData,
+                    retryOnError: e.target.value,
+                  })
+                }
+                placeholder="3"
+                className="bg-input border-border text-sm"
+              />
+              <p className="text-xs text-muted-foreground">
+                Cantidad de veces que se reintenta la pregunta si la validación falla (opcional)
+              </p>
             </div>
           </>
         )

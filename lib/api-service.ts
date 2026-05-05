@@ -799,6 +799,9 @@ export const workflowStepsApi = {
     campoDestino?: string;
     apiConfigId?: number;
     apiMapping?: string;
+    validationRegex?: string | null;
+    validationErrorMessage?: string | null;
+    retryOnError?: number | null;
   }) => {
     const response = await fetch(`${API_BASE_URL}/workflow-steps`, {
       method: "POST",
@@ -817,6 +820,9 @@ export const workflowStepsApi = {
     campoDestino?: string;
     apiConfigId?: number;
     apiMapping?: string;
+    validationRegex?: string | null;
+    validationErrorMessage?: string | null;
+    retryOnError?: number | null;
   }) => {
     const response = await fetch(`${API_BASE_URL}/workflow-steps/${id}`, {
       method: "PUT",

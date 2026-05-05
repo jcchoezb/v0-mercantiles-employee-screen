@@ -263,28 +263,28 @@ export function ChatSupport({ autoSelectConvId, onConvSelected }: ChatSupportPro
                     : "hover:bg-secondary"
                 )}
               >
-                <div className="flex items-start gap-3">
-                  <div className="relative flex-shrink-0">
-                    <Avatar className="h-9 w-9 md:h-10 md:w-10">
-                      <AvatarFallback className="bg-secondary text-secondary-foreground text-xs md:text-sm">
-                        {conv.customer.name
-                          .split(" ")
-                          .map((n) => n[0])
-                          .join("")}
-                      </AvatarFallback>
-                    </Avatar>
-                    {conv.mensajesNoLeidos && conv.mensajesNoLeidos > 0 && (
-                      <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-green-500 text-[10px] font-bold text-white">
-                        {conv.mensajesNoLeidos > 99 ? "99+" : conv.mensajesNoLeidos}
-                      </span>
-                    )}
-                  </div>
+                <div className="flex items-start gap-3 w-full">
+                  <Avatar className="h-9 w-9 md:h-10 md:w-10 flex-shrink-0">
+                    <AvatarFallback className="bg-secondary text-secondary-foreground text-xs md:text-sm">
+                      {conv.customer.name
+                        .split(" ")
+                        .map((n) => n[0])
+                        .join("")}
+                    </AvatarFallback>
+                  </Avatar>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between gap-2 mb-1">
                       <span className="font-medium text-foreground text-sm truncate">
                         {conv.customer.name}
                       </span>
-                      {getStatusBadge(conv.status)}
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        {conv.mensajesNoLeidos && conv.mensajesNoLeidos > 0 && (
+                          <span className="flex h-5 min-w-5 px-1.5 items-center justify-center rounded-full bg-[#25D366] text-[11px] font-semibold text-white">
+                            {conv.mensajesNoLeidos > 99 ? "99+" : conv.mensajesNoLeidos}
+                          </span>
+                        )}
+                        {getStatusBadge(conv.status)}
+                      </div>
                     </div>
                     <p className="text-xs text-muted-foreground truncate">{conv.source}</p>
                     <p className="text-xs text-muted-foreground truncate mt-1">

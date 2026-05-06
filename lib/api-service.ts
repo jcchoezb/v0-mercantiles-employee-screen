@@ -331,13 +331,13 @@ export const mensajesApi = {
     return handleResponse<Record<string, unknown>[]>(response);
   },
 
-  // GET /api/mensajes/conversacion/:conversacionId/chat
+  // GET /api/mensajes/conversacion/:conversacionId
   chat: async (conversacionId: number, params?: { page?: number; size?: number }) => {
     const queryParams = new URLSearchParams();
     if (params?.page !== undefined) queryParams.append("page", String(params.page));
     if (params?.size !== undefined) queryParams.append("size", String(params.size));
     const queryString = queryParams.toString();
-    const url = `${API_BASE_URL}/mensajes/conversacion/${conversacionId}/chat${queryString ? `?${queryString}` : ""}`;
+    const url = `${API_BASE_URL}/mensajes/conversacion/${conversacionId}${queryString ? `?${queryString}` : ""}`;
     const response = await fetch(url, {
       headers: getAuthHeaders(),
     });

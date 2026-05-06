@@ -86,7 +86,7 @@ export function ChatSupport({ autoSelectConvId, onConvSelected }: ChatSupportPro
         id: String(m.id ?? ""),
         content: String(m.contenido ?? ""),
         sender: mapSender(String(m.remitenteTipo ?? "")),
-        timestamp: String(m.fechaEnvio ?? new Date().toISOString()),
+        timestamp: String(m.createdAt ?? new Date().toISOString()),
         senderName: String(m.remitenteNombre ?? ""),
       }))
       // Si es la primera página, retornar solo los nuevos mensajes

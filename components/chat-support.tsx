@@ -6,6 +6,7 @@ import { toast } from "sonner"
 import { useAuth } from "@/lib/auth-context"
 import { conversacionesApi, mensajesApi } from "@/lib/api-service"
 import type { ChatConversation, ChatMessage } from "@/lib/types"
+import chatWebSocket, { MensajeWebSocket } from "@/lib/chat-websocket"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
@@ -118,10 +119,49 @@ export function ChatSupport({ autoSelectConvId, onConvSelected }: ChatSupportPro
       conv.source.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
+  // Callback para mensajes en tiempo real
+  const handleWebSocketMessage = useCallback((mensaje: MensajeWebSocket) => {
+    setSelectedConversation((prev) => {
+      if (!prev || Number(prev.id) !== mensaje.conversacionId) return prev
+      
+      // Verificar si el mensaje ya existe para evitar duplicados
+      const exists = prev.messages.some(
+        (m) => m.id === String(mensaje.id) || m.content === mensaje.contenido
+      )
+      if (exists) return prev
+
+      const newMessage: ChatMessage = {
+        id: String(mensaje.id ?? `ws-${Date.now()}`),
+        content: mensaje.contenido,
+        sender: mapSender(mensaje.remitenteTipo),
+        timestamp: mensaje.createdAt ?? new Date().toISOString(),
+        senderName: mensaje.remitenteNombre ?? "",
+      }
+
+      return {
+        ...prev,
+        messages: [...prev.messages, newMessage],
+      }
+    })
+  }, [])
+
+  // Callback para actualizaciones de conversaciones
+  const handleConversationUpdate = useCallback(() => {
+    fetchConversations()
+  }, [fetchConversations])
+
   const handleSelectConversation = async (conv: ChatConversation) => {
     const msgs = await fetchMessages(conv.id)
     setSelectedConversation({ ...conv, messages: msgs, mensajesNoLeidos: 0 })
     setShowConversationList(false)
+
+    // Conectar WebSocket para recibir mensajes en tiempo real
+    chatWebSocket.connect(
+      Number(conv.id),
+      handleWebSocketMessage,
+      handleConversationUpdate
+    )
+
     // Mark all messages as read when conversation is opened
     try {
       await mensajesApi.leerTodos(Number(conv.id))
@@ -134,7 +174,15 @@ export function ChatSupport({ autoSelectConvId, onConvSelected }: ChatSupportPro
     }
   }
 
+  // Desconectar WebSocket cuando se desmonta el componente
+  useEffect(() => {
+    return () => {
+      chatWebSocket.disconnect()
+    }
+  }, [])
+
   const handleBackToList = () => {
+    chatWebSocket.disconnect()
     setShowConversationList(true)
     setSelectedConversation(null)
   }

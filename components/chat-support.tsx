@@ -161,10 +161,49 @@ export function ChatSupport({ autoSelectConvId, onConvSelected }: ChatSupportPro
     )
   }, [selectedConversation])
 
-  // Callback para actualizaciones de conversaciones
-  const handleConversationUpdate = useCallback(() => {
-    fetchConversations()
-  }, [fetchConversations])
+  // Callback para actualizaciones de conversaciones vía WebSocket
+  const handleConversationUpdate = useCallback((data: Record<string, unknown>) => {
+    const conversacion = data
+    const cliente = conversacion.cliente as Record<string, unknown> | undefined
+    const clienteNombre = String(conversacion.clienteNombre ?? cliente?.nombre ?? "Sin nombre")
+    const clienteEmail = String(conversacion.clienteEmail ?? cliente?.email ?? "")
+
+    const mappedConversation: ChatConversation = {
+      id: String(conversacion.id ?? ""),
+      customer: {
+        id: String(conversacion.clienteId ?? cliente?.id ?? ""),
+        name: clienteNombre,
+        email: clienteEmail,
+        phone: String(cliente?.telefono ?? ""),
+        source: String(conversacion.origen ?? ""),
+        createdAt: String(conversacion.createdAt ?? conversacion.fechaCreacion ?? new Date().toISOString()),
+        status: "active" as const,
+      },
+      messages: [],
+      status: mapConvStatus(String(conversacion.estado ?? "")),
+      source: String(conversacion.canal ?? conversacion.origen ?? ""),
+      createdAt: String(conversacion.createdAt ?? conversacion.fechaCreacion ?? new Date().toISOString()),
+      lastMessage: String(conversacion.tema ?? ""),
+      mensajesNoLeidos: conversacion.mensajesNoLeidos ? Number(conversacion.mensajesNoLeidos) : 0,
+    }
+
+    setConversations((prev) => {
+      const index = prev.findIndex((c) => c.id === mappedConversation.id)
+      if (index === -1) {
+        // Nueva conversación - agregar al inicio
+        return [mappedConversation, ...prev]
+      } else {
+        // Actualizar conversación existente
+        const updated = [...prev]
+        // Preservar mensajes si la conversación está seleccionada
+        updated[index] = {
+          ...mappedConversation,
+          messages: updated[index].messages,
+        }
+        return updated
+      }
+    })
+  }, [])
 
   const handleSelectConversation = async (conv: ChatConversation) => {
     const msgs = await fetchMessages(conv.id)

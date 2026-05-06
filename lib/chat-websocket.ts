@@ -26,6 +26,91 @@ class ChatWebSocket {
   private currentConversationId: number | null = null;
   private isConnected: boolean = false;
 
+  // Conectar al WebSocket solo para escuchar actualizaciones de conversaciones (sin seleccionar una específica)
+  connectGlobal(onConversationUpdate: (data: Record<string, unknown>) => void) {
+    // Si ya está conectado, solo actualizar el callback
+    if (this.isConnected && this.stompClient) {
+      this.onConversationUpdateCallback = onConversationUpdate;
+      return;
+    }
+
+    this.disconnect(); // Cierra conexión anterior si existe
+    this.onConversationUpdateCallback = onConversationUpdate;
+
+    const socket = new SockJS(WS_URL);
+    this.stompClient = new Client({
+      webSocketFactory: () => socket,
+      reconnectDelay: 5000,
+      heartbeatIncoming: 4000,
+      heartbeatOutgoing: 4000,
+      onConnect: () => {
+        console.log("[WebSocket] Conectado globalmente a /topic/conversaciones");
+        this.isConnected = true;
+
+        if (this.stompClient) {
+          // Suscripción a actualizaciones de conversaciones
+          this.conversationSubscription = this.stompClient.subscribe(
+            `/topic/conversaciones`,
+            (message: IMessage) => {
+              const data = JSON.parse(message.body);
+              if (this.onConversationUpdateCallback) {
+                this.onConversationUpdateCallback(data);
+              }
+            }
+          );
+        }
+      },
+      onDisconnect: () => {
+        console.log("[WebSocket] Desconectado");
+        this.isConnected = false;
+      },
+      onStompError: (frame) => {
+        console.error("[WebSocket] Error STOMP:", frame.headers["message"]);
+        this.isConnected = false;
+      },
+    });
+
+    this.stompClient.activate();
+  }
+
+  // Suscribirse a una conversación específica (requiere conexión previa con connectGlobal o connect)
+  subscribeToConversation(
+    conversationId: number,
+    onMessageReceived: (mensaje: MensajeWebSocket) => void
+  ) {
+    this.currentConversationId = conversationId;
+    this.onMessageCallback = onMessageReceived;
+
+    if (this.stompClient && this.isConnected) {
+      // Desuscribir de la conversación anterior si existe
+      if (this.messageSubscription) {
+        this.messageSubscription.unsubscribe();
+        this.messageSubscription = null;
+      }
+
+      console.log(`[WebSocket] Suscribiendo a /topic/conversacion/${conversationId}/mensajes`);
+      this.messageSubscription = this.stompClient.subscribe(
+        `/topic/conversacion/${conversationId}/mensajes`,
+        (message: IMessage) => {
+          const nuevoMensaje: MensajeWebSocket = JSON.parse(message.body);
+          if (this.onMessageCallback) {
+            this.onMessageCallback(nuevoMensaje);
+          }
+        }
+      );
+    }
+  }
+
+  // Desuscribirse de la conversación actual (pero mantener conexión global)
+  unsubscribeFromConversation() {
+    if (this.messageSubscription) {
+      this.messageSubscription.unsubscribe();
+      this.messageSubscription = null;
+    }
+    this.currentConversationId = null;
+    this.onMessageCallback = null;
+  }
+
   // Conectar al WebSocket y suscribirse a una conversación específica
   connect(
     conversationId: number,

@@ -210,12 +210,8 @@ export function ChatSupport({ autoSelectConvId, onConvSelected }: ChatSupportPro
     setSelectedConversation({ ...conv, messages: msgs, mensajesNoLeidos: 0 })
     setShowConversationList(false)
 
-    // Conectar WebSocket para recibir mensajes en tiempo real
-    chatWebSocket.connect(
-      Number(conv.id),
-      handleWebSocketMessage,
-      handleConversationUpdate
-    )
+    // Suscribirse a los mensajes de esta conversación específica
+    chatWebSocket.subscribeToConversation(Number(conv.id), handleWebSocketMessage)
 
     // Mark all messages as read when conversation is opened
     try {
@@ -229,15 +225,16 @@ export function ChatSupport({ autoSelectConvId, onConvSelected }: ChatSupportPro
     }
   }
 
-  // Desconectar WebSocket cuando se desmonta el componente
+  // Conectar WebSocket globalmente al montar el componente para recibir actualizaciones de conversaciones
   useEffect(() => {
+    chatWebSocket.connectGlobal(handleConversationUpdate)
     return () => {
       chatWebSocket.disconnect()
     }
-  }, [])
+  }, [handleConversationUpdate])
 
   const handleBackToList = () => {
-    chatWebSocket.disconnect()
+    chatWebSocket.unsubscribeFromConversation()
     setShowConversationList(true)
     setSelectedConversation(null)
   }

@@ -41,6 +41,11 @@ export function ChatSupport({ autoSelectConvId, onConvSelected }: ChatSupportPro
   const [searchTerm, setSearchTerm] = useState("")
   const [showConversationList, setShowConversationList] = useState(true)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const scrollAreaRef = useRef<HTMLDivElement>(null)
+  const [currentPage, setCurrentPage] = useState(0)
+  const [hasMoreMessages, setHasMoreMessages] = useState(true)
+  const [isLoadingMore, setIsLoadingMore] = useState(false)
+  const PAGE_SIZE = 20
 
   const fetchConversations = useCallback(async () => {
     try {
@@ -74,9 +79,9 @@ export function ChatSupport({ autoSelectConvId, onConvSelected }: ChatSupportPro
     }
   }, [])
 
-  const fetchMessages = useCallback(async (convId: string) => {
+  const fetchMessages = useCallback(async (convId: string, page: number = 0, existingMessages: ChatMessage[] = []) => {
     try {
-      const data = await mensajesApi.chat(Number(convId))
+      const data = await mensajesApi.chat(Number(convId), { page, size: PAGE_SIZE })
       const mapped: ChatMessage[] = (data as Record<string, unknown>[]).map((m) => ({
         id: String(m.id ?? ""),
         content: String(m.contenido ?? ""),
@@ -84,12 +89,21 @@ export function ChatSupport({ autoSelectConvId, onConvSelected }: ChatSupportPro
         timestamp: String(m.fechaEnvio ?? new Date().toISOString()),
         senderName: String(m.remitenteNombre ?? ""),
       }))
-      return mapped
+      // Si es la primera página, retornar solo los nuevos mensajes
+      // Si es una página anterior, agregar al inicio
+      if (page === 0) {
+        setHasMoreMessages(mapped.length >= PAGE_SIZE)
+        return mapped
+      } else {
+        setHasMoreMessages(mapped.length >= PAGE_SIZE)
+        // Agregar mensajes más antiguos al inicio
+        return [...mapped, ...existingMessages]
+      }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Error al cargar mensajes")
-      return []
+      return existingMessages
     }
-  }, [])
+  }, [PAGE_SIZE])
 
   useEffect(() => {
     fetchConversations()
@@ -112,6 +126,73 @@ export function ChatSupport({ autoSelectConvId, onConvSelected }: ChatSupportPro
   useEffect(() => {
     scrollToBottom()
   }, [selectedConversation?.messages])
+
+  // Cargar mensajes más antiguos cuando se hace scroll hacia arriba
+  const loadMoreMessages = useCallback(async () => {
+    if (!selectedConversation || isLoadingMore || !hasMoreMessages) return
+    
+    setIsLoadingMore(true)
+    const nextPage = currentPage + 1
+    const updatedMessages = await fetchMessages(
+      selectedConversation.id, 
+      nextPage, 
+      selectedConversation.messages
+    )
+    
+    setSelectedConversation((prev) => {
+      if (!prev) return prev
+      return { ...prev, messages: updatedMessages }
+    })
+    setCurrentPage(nextPage)
+    setIsLoadingMore(false)
+  }, [selectedConversation, isLoadingMore, hasMoreMessages, currentPage, fetchMessages])
+
+  // Manejar scroll para cargar más mensajes
+  const handleScroll = useCallback((event: React.UIEvent<HTMLDivElement>) => {
+    const target = event.target as HTMLDivElement
+    // Si el scroll está cerca del tope (menos de 50px), cargar más mensajes
+    if (target.scrollTop < 50 && hasMoreMessages && !isLoadingMore) {
+      loadMoreMessages()
+    }
+  }, [hasMoreMessages, isLoadingMore, loadMoreMessages])
+
+  // Función para formatear la fecha como separador
+  const formatDateSeparator = (dateString: string): string => {
+    const date = new Date(dateString)
+    const today = new Date()
+    const yesterday = new Date(today)
+    yesterday.setDate(yesterday.getDate() - 1)
+
+    const isToday = date.toDateString() === today.toDateString()
+    const isYesterday = date.toDateString() === yesterday.toDateString()
+
+    if (isToday) return "Hoy"
+    if (isYesterday) return "Ayer"
+    
+    return date.toLocaleDateString("es-MX", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    })
+  }
+
+  // Agrupar mensajes por fecha
+  const getMessagesWithDateSeparators = (messages: ChatMessage[]) => {
+    const result: { type: "date" | "message"; date?: string; message?: ChatMessage }[] = []
+    let lastDate = ""
+
+    messages.forEach((message) => {
+      const messageDate = new Date(message.timestamp).toDateString()
+      
+      if (messageDate !== lastDate) {
+        result.push({ type: "date", date: message.timestamp })
+        lastDate = messageDate
+      }
+      result.push({ type: "message", message })
+    })
+
+    return result
+  }
 
   const filteredConversations = conversations.filter(
     (conv) =>
@@ -206,7 +287,11 @@ export function ChatSupport({ autoSelectConvId, onConvSelected }: ChatSupportPro
   }, [])
 
   const handleSelectConversation = async (conv: ChatConversation) => {
-    const msgs = await fetchMessages(conv.id)
+    // Resetear paginación
+    setCurrentPage(0)
+    setHasMoreMessages(true)
+    
+    const msgs = await fetchMessages(conv.id, 0, [])
     setSelectedConversation({ ...conv, messages: msgs, mensajesNoLeidos: 0 })
     setShowConversationList(false)
 
@@ -448,58 +533,94 @@ export function ChatSupport({ autoSelectConvId, onConvSelected }: ChatSupportPro
 
             {/* Messages */}
             <div className="flex-1 min-h-0 overflow-hidden">
-            <ScrollArea className="h-full p-3 md:p-4">
-              <div className="space-y-3 md:space-y-4">
-                {selectedConversation.messages.map((message) => (
-                  <div
-                    key={message.id}
-                    className={cn(
-                      "flex gap-2 md:gap-3",
-                      message.sender === "agent" && "flex-row-reverse"
-                    )}
-                  >
-                    <Avatar className="h-7 w-7 md:h-8 md:w-8 flex-shrink-0">
-                      <AvatarFallback
-                        className={cn(
-                          "text-xs",
-                          message.sender === "bot"
-                            ? "bg-secondary text-secondary-foreground"
-                            : message.sender === "agent"
-                              ? "bg-primary text-primary-foreground"
-                              : "bg-muted text-muted-foreground"
-                        )}
-                      >
-                        {getSenderIcon(message.sender)}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div
-                      className={cn(
-                        "max-w-[80%] md:max-w-[70%] rounded-lg p-2 md:p-3",
-                        message.sender === "agent"
-                          ? "bg-primary text-primary-foreground"
-                          : message.sender === "bot"
-                            ? "bg-secondary text-secondary-foreground"
-                            : "bg-muted text-muted-foreground"
-                      )}
-                    >
-                      {message.senderName && (
-                        <p className="text-[10px] md:text-xs font-medium mb-1 opacity-80">
-                          {message.senderName}
-                        </p>
-                      )}
-                      <p className="text-xs md:text-sm">{message.content}</p>
-                      <p className="text-[10px] mt-1 opacity-60">
-                        {new Date(message.timestamp).toLocaleTimeString("es-MX", {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
-                      </p>
-                    </div>
+              <div 
+                ref={scrollAreaRef}
+                className="h-full overflow-y-auto p-3 md:p-4"
+                onScroll={handleScroll}
+              >
+                {/* Indicador de carga de más mensajes */}
+                {isLoadingMore && (
+                  <div className="flex justify-center py-2">
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary"></div>
                   </div>
-                ))}
-                <div ref={messagesEndRef} />
+                )}
+                {hasMoreMessages && !isLoadingMore && (
+                  <div className="flex justify-center py-2">
+                    <button 
+                      onClick={loadMoreMessages}
+                      className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      Cargar mensajes anteriores
+                    </button>
+                  </div>
+                )}
+                <div className="space-y-3 md:space-y-4">
+                  {getMessagesWithDateSeparators(selectedConversation.messages).map((item, index) => {
+                    if (item.type === "date" && item.date) {
+                      return (
+                        <div key={`date-${index}`} className="flex items-center justify-center py-2">
+                          <div className="bg-muted/50 text-muted-foreground text-xs px-3 py-1 rounded-full">
+                            {formatDateSeparator(item.date)}
+                          </div>
+                        </div>
+                      )
+                    }
+                    
+                    if (item.type === "message" && item.message) {
+                      const message = item.message
+                      return (
+                        <div
+                          key={message.id}
+                          className={cn(
+                            "flex gap-2 md:gap-3",
+                            message.sender === "agent" && "flex-row-reverse"
+                          )}
+                        >
+                          <Avatar className="h-7 w-7 md:h-8 md:w-8 flex-shrink-0">
+                            <AvatarFallback
+                              className={cn(
+                                "text-xs",
+                                message.sender === "bot"
+                                  ? "bg-secondary text-secondary-foreground"
+                                  : message.sender === "agent"
+                                    ? "bg-primary text-primary-foreground"
+                                    : "bg-muted text-muted-foreground"
+                              )}
+                            >
+                              {getSenderIcon(message.sender)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div
+                            className={cn(
+                              "max-w-[80%] md:max-w-[70%] rounded-lg p-2 md:p-3",
+                              message.sender === "agent"
+                                ? "bg-primary text-primary-foreground"
+                                : message.sender === "bot"
+                                  ? "bg-secondary text-secondary-foreground"
+                                  : "bg-muted text-muted-foreground"
+                            )}
+                          >
+                            {message.senderName && (
+                              <p className="text-[10px] md:text-xs font-medium mb-1 opacity-80">
+                                {message.senderName}
+                              </p>
+                            )}
+                            <p className="text-xs md:text-sm">{message.content}</p>
+                            <p className="text-[10px] mt-1 opacity-60">
+                              {new Date(message.timestamp).toLocaleTimeString("es-MX", {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })}
+                            </p>
+                          </div>
+                        </div>
+                      )
+                    }
+                    return null
+                  })}
+                  <div ref={messagesEndRef} />
+                </div>
               </div>
-            </ScrollArea>
             </div>
 
             {/* Message Input */}

@@ -287,13 +287,20 @@ export function ChatSupport({ autoSelectConvId, onConvSelected }: ChatSupportPro
   }, [])
 
   const handleSelectConversation = async (conv: ChatConversation) => {
+    // Desuscribirse de la conversación anterior si existe
+    chatWebSocket.unsubscribeFromConversation()
+    
+    // Limpiar estado inmediatamente antes de cargar nuevos mensajes
+    setSelectedConversation({ ...conv, messages: [], mensajesNoLeidos: 0 })
+    setShowConversationList(false)
+    
     // Resetear paginación
     setCurrentPage(0)
     setHasMoreMessages(true)
     
+    // Cargar mensajes de la nueva conversación
     const msgs = await fetchMessages(conv.id, 0, [])
     setSelectedConversation({ ...conv, messages: msgs, mensajesNoLeidos: 0 })
-    setShowConversationList(false)
 
     // Suscribirse a los mensajes de esta conversación específica
     chatWebSocket.subscribeToConversation(Number(conv.id), handleWebSocketMessage)

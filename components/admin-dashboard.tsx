@@ -1,8 +1,10 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { AdminSidebar } from "./admin-sidebar"
 import { conversacionesApi } from "@/lib/api-service"
+import { Client } from "@stomp/stompjs"
+import SockJS from "sockjs-client"
 import { ChatSupport } from "./chat-support"
 import { CustomerManagement } from "./customer-management"
 import { WorkflowManagement } from "./workflow-management"
@@ -36,6 +38,39 @@ export function AdminDashboard() {
     fetchUnreadCount()
     const interval = setInterval(fetchUnreadCount, 30000) // Refresh every 30 seconds
     return () => clearInterval(interval)
+  }, [fetchUnreadCount])
+
+  // WebSocket para actualizar el badge en tiempo real
+  const stompClientRef = useRef<Client | null>(null)
+
+  useEffect(() => {
+    const wsUrl = process.env.NEXT_PUBLIC_WS_URL || "http://localhost:8080/ws-chat"
+    
+    const client = new Client({
+      webSocketFactory: () => new SockJS(wsUrl),
+      reconnectDelay: 5000,
+      heartbeatIncoming: 4000,
+      heartbeatOutgoing: 4000,
+      onConnect: () => {
+        // Suscribirse a actualizaciones globales de conversaciones
+        client.subscribe("/topic/conversaciones", () => {
+          fetchUnreadCount()
+        })
+        // Suscribirse a nuevos mensajes globales
+        client.subscribe("/topic/mensajes", () => {
+          fetchUnreadCount()
+        })
+      },
+    })
+
+    client.activate()
+    stompClientRef.current = client
+
+    return () => {
+      if (stompClientRef.current?.connected) {
+        stompClientRef.current.deactivate()
+      }
+    }
   }, [fetchUnreadCount])
 
   const renderContent = () => {

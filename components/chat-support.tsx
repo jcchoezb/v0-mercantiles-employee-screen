@@ -121,6 +121,7 @@ export function ChatSupport({ autoSelectConvId, onConvSelected }: ChatSupportPro
 
   // Callback para mensajes en tiempo real
   const handleWebSocketMessage = useCallback((mensaje: MensajeWebSocket) => {
+    // Actualizar la conversación seleccionada si el mensaje es para ella
     setSelectedConversation((prev) => {
       if (!prev || Number(prev.id) !== mensaje.conversacionId) return prev
       
@@ -143,7 +144,22 @@ export function ChatSupport({ autoSelectConvId, onConvSelected }: ChatSupportPro
         messages: [...prev.messages, newMessage],
       }
     })
-  }, [])
+
+    // Actualizar el contador de mensajes no leídos en la lista de conversaciones
+    // si el mensaje es para una conversación diferente a la seleccionada
+    setConversations((prev) =>
+      prev.map((c) => {
+        if (Number(c.id) === mensaje.conversacionId) {
+          // Solo incrementar si no es la conversación actualmente seleccionada
+          const isSelected = selectedConversation && Number(selectedConversation.id) === mensaje.conversacionId
+          if (!isSelected) {
+            return { ...c, mensajesNoLeidos: (c.mensajesNoLeidos || 0) + 1 }
+          }
+        }
+        return c
+      })
+    )
+  }, [selectedConversation])
 
   // Callback para actualizaciones de conversaciones
   const handleConversationUpdate = useCallback(() => {

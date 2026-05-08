@@ -1049,6 +1049,84 @@ export const reportesApi = {
 };
 
 // ============================================
+// PARAMETROS API
+// ============================================
+export const parametrosApi = {
+  // GET /api/parametros
+  listar: async () => {
+    const response = await fetch(`${API_BASE_URL}/parametros`, {
+      headers: getAuthHeaders(),
+    });
+    return handleResponse<Record<string, unknown>[]>(response);
+  },
+
+  // POST /api/parametros
+  crear: async (data: {
+    codigo: string;
+    nombre: string;
+    valor: string;
+    descripcion: string;
+    ambiente: string;
+    modulo: string;
+    esEncriptado: boolean;
+    usuarioCreacion: string;
+  }) => {
+    const response = await fetch(`${API_BASE_URL}/parametros`, {
+      method: "POST",
+      headers: getAuthHeaders(),
+      body: JSON.stringify(data),
+    });
+    return handleResponse<Record<string, unknown>>(response);
+  },
+
+  // PUT /api/parametros/:id
+  actualizar: async (id: number, data: {
+    codigo: string;
+    nombre: string;
+    valor: string;
+    descripcion: string;
+    ambiente: string;
+    modulo: string;
+    esEncriptado: boolean;
+    usuarioCreacion: string;
+  }) => {
+    const response = await fetch(`${API_BASE_URL}/parametros/${id}`, {
+      method: "PUT",
+      headers: getAuthHeaders(),
+      body: JSON.stringify(data),
+    });
+    return handleResponse<Record<string, unknown>>(response);
+  },
+
+  // DELETE /api/parametros/:id
+  eliminar: async (id: number) => {
+    const response = await fetch(`${API_BASE_URL}/parametros/${id}`, {
+      method: "DELETE",
+      headers: getAuthHeaders(),
+    });
+    return handleResponse<void>(response);
+  },
+
+  // PATCH /api/parametros/:id/activar?usuario=X
+  activar: async (id: number, usuario: string) => {
+    const response = await fetch(`${API_BASE_URL}/parametros/${id}/activar?usuario=${encodeURIComponent(usuario)}`, {
+      method: "PATCH",
+      headers: getAuthHeadersSimple(),
+    });
+    return handleResponse<Record<string, unknown>>(response);
+  },
+
+  // PATCH /api/parametros/:id/desactivar?usuario=X
+  desactivar: async (id: number, usuario: string) => {
+    const response = await fetch(`${API_BASE_URL}/parametros/${id}/desactivar?usuario=${encodeURIComponent(usuario)}`, {
+      method: "PATCH",
+      headers: getAuthHeadersSimple(),
+    });
+    return handleResponse<Record<string, unknown>>(response);
+  },
+};
+
+// ============================================
 // DASHBOARD API
 // ============================================
 export const dashboardApi = {

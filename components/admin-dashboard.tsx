@@ -15,6 +15,7 @@ import { ReportsDashboard } from "./reports-dashboard"
 import { EmployeeManagement } from "./employee-management"
 import { ChangePassword } from "./change-password"
 import { ChatAssignment } from "./chat-assignment"
+import { ParametersManagement } from "./parameters-management"
 
 export function AdminDashboard() {
   const [activeTab, setActiveTab] = useState("chat")
@@ -141,6 +142,8 @@ export function AdminDashboard() {
         return <ReportsDashboard />
       case "employees":
         return <EmployeeManagement />
+      case "parameters":
+        return <ParametersManagement />
       case "settings":
         return <ChangePassword />
       default:
@@ -168,6 +171,8 @@ export function AdminDashboard() {
         return "Reportes y Estadisticas"
       case "employees":
         return "Gestion de Empleados"
+      case "parameters":
+        return "Gestion de Parametros"
       case "settings":
         return "Configuracion de Cuenta"
       default:

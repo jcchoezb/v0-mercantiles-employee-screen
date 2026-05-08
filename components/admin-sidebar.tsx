@@ -18,6 +18,7 @@ import {
   Globe,
   FileText,
   UserPlus,
+  SlidersHorizontal,
 } from "lucide-react"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -41,6 +42,7 @@ const menuItems = [
   { id: "companies", label: "Empresas", icon: Building2, roles: ["admin"] },
   { id: "templates", label: "Plantillas", icon: FileText, roles: ["admin", "supervisor"] },
   { id: "employees", label: "Empleados", icon: UserCog, roles: ["admin"] },
+  { id: "parameters", label: "Parametros", icon: SlidersHorizontal, roles: ["admin"] },
   { id: "reports", label: "Reportes", icon: BarChart3, roles: ["admin", "supervisor", "agent"] },
   { id: "settings", label: "Configuracion", icon: Settings, roles: ["admin", "supervisor", "agent"] },
 ]

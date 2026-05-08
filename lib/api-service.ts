@@ -229,20 +229,6 @@ export const conversacionesApi = {
     return handleResponse<Record<string, unknown>[]>(response);
   },
 
-  // PATCH /api/conversaciones/:id/asignar?empleadoId=X
-  asignar: async (id: number, data: { empleadoId: number; motivo?: string }) => {
-    const params = new URLSearchParams({ empleadoId: String(data.empleadoId) });
-    if (data.motivo) params.append("motivo", data.motivo);
-    const response = await fetch(
-      `${API_BASE_URL}/conversaciones/${id}/asignar?${params.toString()}`,
-      {
-        method: "PATCH",
-        headers: getAuthHeadersSimple(),
-      }
-    );
-    return handleResponse<Record<string, unknown>>(response);
-  },
-
   // PATCH /api/conversaciones/:id/cerrar
   cerrar: async (id: number) => {
     const response = await fetch(`${API_BASE_URL}/conversaciones/${id}/cerrar`, {
@@ -285,6 +271,14 @@ export const conversacionesApi = {
       body: JSON.stringify({ empleadoId, motivo: motivo || "Asignación manual" }),
     });
     return handleResponse<Record<string, unknown>>(response);
+  },
+
+  // GET /api/conversaciones/asignados/:empresaId
+  asignados: async (empresaId: number) => {
+    const response = await fetch(`${API_BASE_URL}/conversaciones/asignados/${empresaId}`, {
+      headers: getAuthHeaders(),
+    });
+    return handleResponse<Record<string, unknown>[]>(response);
   },
 };
 

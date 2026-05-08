@@ -200,7 +200,7 @@ export function ChatSupport({ autoSelectConvId, onConvSelected }: ChatSupportPro
       conv.source.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
-  // Callback para mensajes en tiempo real
+  // Callback para mensajes en tiempo real de la conversación seleccionada
   const handleWebSocketMessage = useCallback((mensaje: MensajeWebSocket) => {
     // Actualizar la conversación seleccionada si el mensaje es para ella
     setSelectedConversation((prev) => {
@@ -225,9 +225,11 @@ export function ChatSupport({ autoSelectConvId, onConvSelected }: ChatSupportPro
         messages: [...prev.messages, newMessage],
       }
     })
+  }, [])
 
+  // Callback global para TODOS los mensajes nuevos (actualiza badges)
+  const handleGlobalMessage = useCallback((mensaje: MensajeWebSocket) => {
     // Actualizar el contador de mensajes no leídos en la lista de conversaciones
-    // si el mensaje es para una conversación diferente a la seleccionada
     setConversations((prev) =>
       prev.map((c) => {
         if (Number(c.id) === mensaje.conversacionId) {
@@ -240,6 +242,30 @@ export function ChatSupport({ autoSelectConvId, onConvSelected }: ChatSupportPro
         return c
       })
     )
+
+    // Si el mensaje es para la conversación seleccionada, también agregarlo al chat
+    setSelectedConversation((prev) => {
+      if (!prev || Number(prev.id) !== mensaje.conversacionId) return prev
+      
+      // Verificar si el mensaje ya existe para evitar duplicados
+      const exists = prev.messages.some(
+        (m) => m.id === String(mensaje.id) || m.content === mensaje.contenido
+      )
+      if (exists) return prev
+
+      const newMessage: ChatMessage = {
+        id: String(mensaje.id ?? `ws-${Date.now()}`),
+        content: mensaje.contenido,
+        sender: mapSender(mensaje.remitenteTipo),
+        timestamp: mensaje.createdAt ?? new Date().toISOString(),
+        senderName: mensaje.remitenteNombre ?? "",
+      }
+
+      return {
+        ...prev,
+        messages: [...prev.messages, newMessage],
+      }
+    })
   }, [selectedConversation])
 
   // Callback para actualizaciones de conversaciones vía WebSocket
@@ -317,13 +343,13 @@ export function ChatSupport({ autoSelectConvId, onConvSelected }: ChatSupportPro
     }
   }
 
-  // Conectar WebSocket globalmente al montar el componente para recibir actualizaciones de conversaciones
+  // Conectar WebSocket globalmente al montar el componente para recibir actualizaciones de conversaciones y mensajes
   useEffect(() => {
-    chatWebSocket.connectGlobal(handleConversationUpdate)
+    chatWebSocket.connectGlobal(handleConversationUpdate, handleGlobalMessage)
     return () => {
       chatWebSocket.disconnect()
     }
-  }, [handleConversationUpdate])
+  }, [handleConversationUpdate, handleGlobalMessage])
 
   const handleBackToList = () => {
     chatWebSocket.unsubscribeFromConversation()

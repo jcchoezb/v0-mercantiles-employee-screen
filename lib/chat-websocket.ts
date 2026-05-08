@@ -21,21 +21,28 @@ class ChatWebSocket {
   private stompClient: Client | null = null;
   private messageSubscription: { unsubscribe: () => void } | null = null;
   private conversationSubscription: { unsubscribe: () => void } | null = null;
+  private globalMessageSubscription: { unsubscribe: () => void } | null = null;
   private onMessageCallback: ((mensaje: MensajeWebSocket) => void) | null = null;
   private onConversationUpdateCallback: ((data: Record<string, unknown>) => void) | null = null;
+  private onGlobalMessageCallback: ((mensaje: MensajeWebSocket) => void) | null = null;
   private currentConversationId: number | null = null;
   private isConnected: boolean = false;
 
   // Conectar al WebSocket solo para escuchar actualizaciones de conversaciones (sin seleccionar una específica)
-  connectGlobal(onConversationUpdate: (data: Record<string, unknown>) => void) {
-    // Si ya está conectado, solo actualizar el callback
+  connectGlobal(
+    onConversationUpdate: (data: Record<string, unknown>) => void,
+    onGlobalMessage?: (mensaje: MensajeWebSocket) => void
+  ) {
+    // Si ya está conectado, solo actualizar los callbacks
     if (this.isConnected && this.stompClient) {
       this.onConversationUpdateCallback = onConversationUpdate;
+      this.onGlobalMessageCallback = onGlobalMessage || null;
       return;
     }
 
     this.disconnect(); // Cierra conexión anterior si existe
     this.onConversationUpdateCallback = onConversationUpdate;
+    this.onGlobalMessageCallback = onGlobalMessage || null;
 
     const socket = new SockJS(WS_URL);
     this.stompClient = new Client({
@@ -44,7 +51,7 @@ class ChatWebSocket {
       heartbeatIncoming: 4000,
       heartbeatOutgoing: 4000,
       onConnect: () => {
-        console.log("[WebSocket] Conectado globalmente a /topic/conversaciones");
+        console.log("[WebSocket] Conectado globalmente a /topic/conversaciones y /topic/mensajes");
         this.isConnected = true;
 
         if (this.stompClient) {
@@ -55,6 +62,17 @@ class ChatWebSocket {
               const data = JSON.parse(message.body);
               if (this.onConversationUpdateCallback) {
                 this.onConversationUpdateCallback(data);
+              }
+            }
+          );
+
+          // Suscripción global a todos los mensajes nuevos
+          this.globalMessageSubscription = this.stompClient.subscribe(
+            `/topic/mensajes`,
+            (message: IMessage) => {
+              const nuevoMensaje: MensajeWebSocket = JSON.parse(message.body);
+              if (this.onGlobalMessageCallback) {
+                this.onGlobalMessageCallback(nuevoMensaje);
               }
             }
           );
@@ -181,6 +199,10 @@ class ChatWebSocket {
       this.conversationSubscription.unsubscribe();
       this.conversationSubscription = null;
     }
+    if (this.globalMessageSubscription) {
+      this.globalMessageSubscription.unsubscribe();
+      this.globalMessageSubscription = null;
+    }
     if (this.stompClient) {
       this.stompClient.deactivate();
       this.stompClient = null;
@@ -188,6 +210,7 @@ class ChatWebSocket {
     this.currentConversationId = null;
     this.onMessageCallback = null;
     this.onConversationUpdateCallback = null;
+    this.onGlobalMessageCallback = null;
     this.isConnected = false;
   }
 

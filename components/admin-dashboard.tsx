@@ -43,6 +43,27 @@ export function AdminDashboard() {
   // WebSocket para actualizar el badge en tiempo real
   const stompClientRef = useRef<Client | null>(null)
 
+  // Lista de IDs de conversaciones para suscribirse a sus mensajes
+  const [conversationIds, setConversationIds] = useState<number[]>([])
+  const messageSubscriptionsRef = useRef<Map<number, { unsubscribe: () => void }>>(new Map())
+
+  // Obtener lista de conversaciones para suscribirse a sus mensajes
+  const fetchConversationIds = useCallback(async () => {
+    try {
+      const data = await conversacionesApi.listar()
+      const ids = (data as Record<string, unknown>[])
+        .filter((c) => c.estado === "activa" || c.estado === "en_atencion" || c.estado === "pendiente" || c.estado === "nueva")
+        .map((c) => Number(c.id))
+      setConversationIds(ids)
+    } catch {
+      // silently fail
+    }
+  }, [])
+
+  useEffect(() => {
+    fetchConversationIds()
+  }, [fetchConversationIds])
+
   useEffect(() => {
     const wsUrl = process.env.NEXT_PUBLIC_WS_URL || "http://localhost:8080/ws-chat"
     
@@ -55,10 +76,17 @@ export function AdminDashboard() {
         // Suscribirse a actualizaciones globales de conversaciones
         client.subscribe("/topic/conversaciones", () => {
           fetchUnreadCount()
+          fetchConversationIds() // Actualizar lista de conversaciones
         })
-        // Suscribirse a nuevos mensajes globales
-        client.subscribe("/topic/mensajes", () => {
-          fetchUnreadCount()
+
+        // Suscribirse a mensajes de cada conversación
+        conversationIds.forEach((convId) => {
+          if (!messageSubscriptionsRef.current.has(convId)) {
+            const sub = client.subscribe(`/topic/conversacion/${convId}/mensajes`, () => {
+              fetchUnreadCount()
+            })
+            messageSubscriptionsRef.current.set(convId, sub)
+          }
         })
       },
     })
@@ -67,11 +95,15 @@ export function AdminDashboard() {
     stompClientRef.current = client
 
     return () => {
+      // Limpiar suscripciones de mensajes
+      messageSubscriptionsRef.current.forEach((sub) => sub.unsubscribe())
+      messageSubscriptionsRef.current.clear()
+      
       if (stompClientRef.current?.connected) {
         stompClientRef.current.deactivate()
       }
     }
-  }, [fetchUnreadCount])
+  }, [fetchUnreadCount, fetchConversationIds, conversationIds])
 
   const renderContent = () => {
     switch (activeTab) {

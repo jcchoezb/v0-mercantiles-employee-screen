@@ -277,12 +277,12 @@ export const conversacionesApi = {
     return handleResponse<Record<string, unknown>[]>(response);
   },
 
-  // PATCH /api/conversaciones/:id/asignar
-  asignar: async (id: number, empleadoId: number) => {
+  // POST /api/conversaciones/:id/asignar
+  asignar: async (id: number, empleadoId: number, motivo?: string) => {
     const response = await fetch(`${API_BASE_URL}/conversaciones/${id}/asignar`, {
-      method: "PATCH",
+      method: "POST",
       headers: getAuthHeaders(),
-      body: JSON.stringify({ empleadoId }),
+      body: JSON.stringify({ empleadoId, motivo: motivo || "Asignación manual" }),
     });
     return handleResponse<Record<string, unknown>>(response);
   },

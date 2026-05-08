@@ -97,6 +97,7 @@ export function ChatAssignment() {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [selectedConversacion, setSelectedConversacion] = useState<ConversacionPendiente | null>(null)
   const [selectedEmpleadoId, setSelectedEmpleadoId] = useState<string>("")
+  const [motivoAsignacion, setMotivoAsignacion] = useState<string>("")
   const [isAssigning, setIsAssigning] = useState(false)
   const itemsPerPage = 8
 
@@ -196,6 +197,7 @@ export function ChatAssignment() {
   const handleOpenAssignDialog = (conv: ConversacionPendiente) => {
     setSelectedConversacion(conv)
     setSelectedEmpleadoId("")
+    setMotivoAsignacion("")
     setIsDialogOpen(true)
   }
 
@@ -203,7 +205,7 @@ export function ChatAssignment() {
     if (!selectedConversacion || !selectedEmpleadoId) return
     try {
       setIsAssigning(true)
-      await conversacionesApi.asignar(selectedConversacion.id, Number(selectedEmpleadoId))
+      await conversacionesApi.asignar(selectedConversacion.id, Number(selectedEmpleadoId), motivoAsignacion || undefined)
       toast.success("Chat asignado correctamente")
       setIsDialogOpen(false)
       fetchConversaciones()
@@ -548,6 +550,18 @@ export function ChatAssignment() {
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-card-foreground">
+                  Motivo (opcional):
+                </label>
+                <Input
+                  value={motivoAsignacion}
+                  onChange={(e) => setMotivoAsignacion(e.target.value)}
+                  placeholder="Ej: Se requiere respuesta humana"
+                  className="bg-input border-border text-foreground"
+                />
               </div>
             </div>
           )}

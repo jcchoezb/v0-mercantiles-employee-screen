@@ -558,13 +558,14 @@ export function ChatSupport({ autoSelectConvId, onConvSelected, onMessagesRead, 
               </div>
               <div className="flex items-center gap-2 md:gap-3 flex-shrink-0">
                 {getStatusBadge(selectedConversation.status)}
-                <label className="flex items-center gap-2 cursor-pointer">
+                <label className="flex items-center gap-2 cursor-pointer group">
                   <span className="text-xs text-muted-foreground hidden sm:inline">Asistente IA</span>
-                  <input
-                    type="checkbox"
-                    checked={selectedConversation.modoAtencion === "BOT"}
-                    onChange={async (e) => {
-                      const nuevoModo = e.target.checked ? "BOT" : "HUMANO"
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={selectedConversation.modoAtencion === "BOT"}
+                    onClick={async () => {
+                      const nuevoModo = selectedConversation.modoAtencion === "BOT" ? "HUMANO" : "BOT"
                       try {
                         await conversacionesApi.cambiarModo(Number(selectedConversation.id), nuevoModo)
                         setSelectedConversation((prev) => prev ? { ...prev, modoAtencion: nuevoModo } : prev)
@@ -573,8 +574,18 @@ export function ChatSupport({ autoSelectConvId, onConvSelected, onMessagesRead, 
                         toast.error(err instanceof Error ? err.message : "Error al cambiar modo")
                       }
                     }}
-                    className="h-4 w-4 rounded border-border text-primary focus:ring-primary"
-                  />
+                    className={cn(
+                      "relative inline-flex h-5 w-9 flex-shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background",
+                      selectedConversation.modoAtencion === "BOT" ? "bg-primary" : "bg-muted"
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        "pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out",
+                        selectedConversation.modoAtencion === "BOT" ? "translate-x-4" : "translate-x-0"
+                      )}
+                    />
+                  </button>
                 </label>
               </div>
             </div>
@@ -685,15 +696,19 @@ export function ChatSupport({ autoSelectConvId, onConvSelected, onMessagesRead, 
               ) : (
                 <div className="flex gap-2">
                   <Input
-                    placeholder="Escribe un mensaje..."
+                    placeholder={selectedConversation.modoAtencion === "BOT" ? "Asistente IA activo - Entrada deshabilitada" : "Escribe un mensaje..."}
                     value={newMessage}
                     onChange={(e) => setNewMessage(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && handleSendMessage()}
-                    className="flex-1 bg-input border-border text-foreground placeholder:text-muted-foreground text-sm"
+                    disabled={selectedConversation.modoAtencion === "BOT"}
+                    className={cn(
+                      "flex-1 bg-input border-border text-foreground placeholder:text-muted-foreground text-sm",
+                      selectedConversation.modoAtencion === "BOT" && "opacity-50 cursor-not-allowed"
+                    )}
                   />
                   <Button
                     onClick={handleSendMessage}
-                    disabled={!newMessage.trim()}
+                    disabled={!newMessage.trim() || selectedConversation.modoAtencion === "BOT"}
                     className="bg-primary text-primary-foreground hover:bg-primary/90"
                   >
                     <Send className="h-4 w-4" />

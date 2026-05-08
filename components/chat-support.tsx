@@ -227,6 +227,46 @@ export function ChatSupport({ autoSelectConvId, onConvSelected }: ChatSupportPro
     })
   }, [])
 
+  // Callback global para mensajes de TODAS las conversaciones (actualiza badges)
+  const handleGlobalMessage = useCallback((mensaje: MensajeWebSocket) => {
+    // Actualizar el contador de mensajes no leídos en la lista de conversaciones
+    setConversations((prev) =>
+      prev.map((c) => {
+        if (Number(c.id) === mensaje.conversacionId) {
+          // Solo incrementar si no es la conversación actualmente seleccionada
+          const isCurrentlySelected = selectedConversation && Number(selectedConversation.id) === mensaje.conversacionId
+          if (!isCurrentlySelected) {
+            return { ...c, mensajesNoLeidos: (c.mensajesNoLeidos || 0) + 1 }
+          }
+        }
+        return c
+      })
+    )
+
+    // Si el mensaje es para la conversación seleccionada, agregarlo al chat
+    setSelectedConversation((prev) => {
+      if (!prev || Number(prev.id) !== mensaje.conversacionId) return prev
+      
+      const exists = prev.messages.some(
+        (m) => m.id === String(mensaje.id) || m.content === mensaje.contenido
+      )
+      if (exists) return prev
+
+      const newMessage: ChatMessage = {
+        id: String(mensaje.id ?? `ws-${Date.now()}`),
+        content: mensaje.contenido,
+        sender: mapSender(mensaje.remitenteTipo),
+        timestamp: mensaje.createdAt ?? new Date().toISOString(),
+        senderName: mensaje.remitenteNombre ?? "",
+      }
+
+      return {
+        ...prev,
+        messages: [...prev.messages, newMessage],
+      }
+    })
+  }, [selectedConversation])
+
   // Callback para actualizaciones de conversaciones vía WebSocket
   const handleConversationUpdate = useCallback((data: Record<string, unknown>) => {
     const conversacion = data
@@ -304,11 +344,19 @@ export function ChatSupport({ autoSelectConvId, onConvSelected }: ChatSupportPro
 
   // Conectar WebSocket globalmente al montar el componente para recibir actualizaciones de conversaciones
   useEffect(() => {
-    chatWebSocket.connectGlobal(handleConversationUpdate)
+    chatWebSocket.connectGlobal(handleConversationUpdate, handleGlobalMessage)
     return () => {
       chatWebSocket.disconnect()
     }
-  }, [handleConversationUpdate])
+  }, [handleConversationUpdate, handleGlobalMessage])
+
+  // Suscribirse a los mensajes de todas las conversaciones cargadas
+  useEffect(() => {
+    if (conversations.length > 0) {
+      const conversationIds = conversations.map((c) => Number(c.id))
+      chatWebSocket.subscribeToAllConversations(conversationIds)
+    }
+  }, [conversations])
 
   const handleBackToList = () => {
     chatWebSocket.unsubscribeFromConversation()

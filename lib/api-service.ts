@@ -280,6 +280,15 @@ export const conversacionesApi = {
     });
     return handleResponse<Record<string, unknown>[]>(response);
   },
+
+  // PATCH /api/conversaciones/:id/modo?modo=BOT|HUMANO
+  cambiarModo: async (id: number, modo: "BOT" | "HUMANO") => {
+    const response = await fetch(`${API_BASE_URL}/conversaciones/${id}/modo?modo=${modo}`, {
+      method: "PATCH",
+      headers: getAuthHeadersSimple(),
+    });
+    return handleResponse<Record<string, unknown>>(response);
+  },
 };
 
 // ============================================

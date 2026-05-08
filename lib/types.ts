@@ -46,6 +46,7 @@ export interface ChatConversation {
   createdAt: string
   lastMessage?: string
   mensajesNoLeidos?: number
+  modoAtencion?: "BOT" | "HUMANO"
 }
 
 export interface ChatbotRecord {

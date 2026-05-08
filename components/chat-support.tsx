@@ -17,8 +17,6 @@ import { cn } from "@/lib/utils"
 import {
   Send,
   Search,
-  Phone,
-  MoreVertical,
   Clock,
   CheckCircle,
   AlertCircle,
@@ -98,8 +96,9 @@ export function ChatSupport({ autoSelectConvId, onConvSelected, onMessagesRead, 
           status: mapConvStatus(String(c.estado ?? "")),
           source: String(c.canal ?? c.origen ?? ""),
           createdAt: String(c.createdAt ?? c.fechaCreacion ?? new Date().toISOString()),
-          lastMessage: String(c.tema ?? ""),
+          lastMessage: String(c.ultimoMensaje ?? c.tema ?? ""),
           mensajesNoLeidos: c.mensajesNoLeidos ? Number(c.mensajesNoLeidos) : 0,
+          modoAtencion: (c.modoAtencion as "BOT" | "HUMANO") ?? "HUMANO",
         }
       })
       setConversations(mapped)
@@ -149,7 +148,7 @@ export function ChatSupport({ autoSelectConvId, onConvSelected, onMessagesRead, 
   }, [autoSelectConvId, conversations]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+    messagesEndRef.current?.scrollIntoView({ behavior: "instant" })
   }
 
   useEffect(() => {
@@ -278,8 +277,9 @@ export function ChatSupport({ autoSelectConvId, onConvSelected, onMessagesRead, 
       status: mapConvStatus(String(conversacion.estado ?? "")),
       source: String(conversacion.canal ?? conversacion.origen ?? ""),
       createdAt: String(conversacion.createdAt ?? conversacion.fechaCreacion ?? new Date().toISOString()),
-      lastMessage: String(conversacion.tema ?? ""),
+      lastMessage: String(conversacion.ultimoMensaje ?? conversacion.tema ?? ""),
       mensajesNoLeidos: conversacion.mensajesNoLeidos ? Number(conversacion.mensajesNoLeidos) : 0,
+      modoAtencion: (conversacion.modoAtencion as "BOT" | "HUMANO") ?? "HUMANO",
     }
 
     setConversations((prev) => {
@@ -556,14 +556,26 @@ export function ChatSupport({ autoSelectConvId, onConvSelected, onMessagesRead, 
                   </p>
                 </div>
               </div>
-              <div className="flex items-center gap-1 md:gap-2 flex-shrink-0">
+              <div className="flex items-center gap-2 md:gap-3 flex-shrink-0">
                 {getStatusBadge(selectedConversation.status)}
-                <Button variant="ghost" size="icon" className="text-foreground hover:bg-secondary hidden sm:flex">
-                  <Phone className="h-4 w-4" />
-                </Button>
-                <Button variant="ghost" size="icon" className="text-foreground hover:bg-secondary">
-                  <MoreVertical className="h-4 w-4" />
-                </Button>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <span className="text-xs text-muted-foreground hidden sm:inline">Asistente IA</span>
+                  <input
+                    type="checkbox"
+                    checked={selectedConversation.modoAtencion === "BOT"}
+                    onChange={async (e) => {
+                      const nuevoModo = e.target.checked ? "BOT" : "HUMANO"
+                      try {
+                        await conversacionesApi.cambiarModo(Number(selectedConversation.id), nuevoModo)
+                        setSelectedConversation((prev) => prev ? { ...prev, modoAtencion: nuevoModo } : prev)
+                        toast.success(`Modo cambiado a ${nuevoModo === "BOT" ? "Asistente IA" : "Humano"}`)
+                      } catch (err) {
+                        toast.error(err instanceof Error ? err.message : "Error al cambiar modo")
+                      }
+                    }}
+                    className="h-4 w-4 rounded border-border text-primary focus:ring-primary"
+                  />
+                </label>
               </div>
             </div>
 

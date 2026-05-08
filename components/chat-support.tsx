@@ -568,7 +568,7 @@ export function ChatSupport({ autoSelectConvId, onConvSelected, onMessagesRead }
                       const message = item.message
                       return (
                         <div
-                          key={message.id}
+                          key={`msg-${message.id}-${index}`}
                           className={cn(
                             "flex gap-2 md:gap-3",
                             message.sender === "agent" && "flex-row-reverse"

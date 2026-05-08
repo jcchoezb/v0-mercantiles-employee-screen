@@ -46,6 +46,12 @@ export function AdminDashboard() {
   // Lista de IDs de conversaciones para suscribirse a sus mensajes
   const [conversationIds, setConversationIds] = useState<number[]>([])
   const messageSubscriptionsRef = useRef<Map<number, { unsubscribe: () => void }>>(new Map())
+  const incrementBadgeFnRef = useRef<((conversationId: number) => void) | null>(null)
+
+  // Función para registrar el callback de incremento de badge desde ChatSupport
+  const registerIncrementBadge = useCallback((fn: (conversationId: number) => void) => {
+    incrementBadgeFnRef.current = fn
+  }, [])
 
   // Obtener lista de conversaciones para suscribirse a sus mensajes
   const fetchConversationIds = useCallback(async () => {
@@ -84,6 +90,10 @@ export function AdminDashboard() {
           if (!messageSubscriptionsRef.current.has(convId)) {
             const sub = client.subscribe(`/topic/conversacion/${convId}/mensajes`, () => {
               fetchUnreadCount()
+              // Incrementar el badge de la conversación específica en ChatSupport
+              if (incrementBadgeFnRef.current) {
+                incrementBadgeFnRef.current(convId)
+              }
             })
             messageSubscriptionsRef.current.set(convId, sub)
           }
@@ -113,7 +123,7 @@ export function AdminDashboard() {
   const renderContent = () => {
     switch (activeTab) {
       case "chat":
-        return <ChatSupport autoSelectConvId={pendingConvId} onConvSelected={() => setPendingConvId(null)} onMessagesRead={handleMessagesRead} onNewMessage={fetchUnreadCount} />
+        return <ChatSupport autoSelectConvId={pendingConvId} onConvSelected={() => setPendingConvId(null)} onMessagesRead={handleMessagesRead} onNewMessage={fetchUnreadCount} registerIncrementBadge={registerIncrementBadge} />
       case "customers":
         return <CustomerManagement onNavigateToChat={(convId) => { setPendingConvId(convId); setActiveTab("chat"); }} />
       case "workflows":

@@ -33,9 +33,10 @@ interface ChatSupportProps {
   onConvSelected?: () => void
   onMessagesRead?: (count: number) => void
   onNewMessage?: () => void
+  registerIncrementBadge?: (fn: (conversationId: number) => void) => void
 }
 
-export function ChatSupport({ autoSelectConvId, onConvSelected, onMessagesRead, onNewMessage }: ChatSupportProps) {
+export function ChatSupport({ autoSelectConvId, onConvSelected, onMessagesRead, onNewMessage, registerIncrementBadge }: ChatSupportProps) {
   const { employee } = useAuth()
   const [conversations, setConversations] = useState<ChatConversation[]>([])
   const [selectedConversation, setSelectedConversation] = useState<ChatConversation | null>(null)
@@ -48,6 +49,29 @@ export function ChatSupport({ autoSelectConvId, onConvSelected, onMessagesRead, 
   const [hasMoreMessages, setHasMoreMessages] = useState(true)
   const [isLoadingMore, setIsLoadingMore] = useState(false)
   const PAGE_SIZE = 20
+
+  // Función para incrementar el badge de una conversación específica (llamada desde el padre)
+  const incrementBadgeForConversation = useCallback((conversationId: number) => {
+    setConversations((prev) =>
+      prev.map((c) => {
+        if (Number(c.id) === conversationId) {
+          // Solo incrementar si NO es la conversación seleccionada
+          const isSelected = selectedConversation && Number(selectedConversation.id) === conversationId
+          if (!isSelected) {
+            return { ...c, mensajesNoLeidos: (c.mensajesNoLeidos || 0) + 1 }
+          }
+        }
+        return c
+      })
+    )
+  }, [selectedConversation])
+
+  // Efecto para registrar la función de incremento con el padre
+  useEffect(() => {
+    if (registerIncrementBadge) {
+      registerIncrementBadge(incrementBadgeForConversation)
+    }
+  }, [registerIncrementBadge, incrementBadgeForConversation])
 
   const fetchConversations = useCallback(async () => {
     try {

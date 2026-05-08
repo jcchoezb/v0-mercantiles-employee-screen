@@ -17,6 +17,7 @@ import {
   GitBranch,
   Globe,
   FileText,
+  UserPlus,
 } from "lucide-react"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -33,6 +34,7 @@ interface AdminSidebarProps {
 
 const menuItems = [
   { id: "chat", label: "Chat en Vivo", icon: MessageSquare, roles: ["admin", "supervisor", "agent"] },
+  { id: "chat-assignment", label: "Asignacion de Chats", icon: UserPlus, roles: ["admin"] },
   { id: "customers", label: "Clientes", icon: Users, roles: ["admin", "supervisor", "agent"] },
   { id: "workflows", label: "Workflows", icon: GitBranch, roles: ["admin", "supervisor"] },
   { id: "apis", label: "APIs Externas", icon: Globe, roles: ["admin"] },

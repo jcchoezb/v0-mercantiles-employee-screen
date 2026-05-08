@@ -14,6 +14,7 @@ import { TemplateManagement } from "./template-management"
 import { ReportsDashboard } from "./reports-dashboard"
 import { EmployeeManagement } from "./employee-management"
 import { ChangePassword } from "./change-password"
+import { ChatAssignment } from "./chat-assignment"
 
 export function AdminDashboard() {
   const [activeTab, setActiveTab] = useState("chat")
@@ -124,6 +125,8 @@ export function AdminDashboard() {
     switch (activeTab) {
       case "chat":
         return <ChatSupport autoSelectConvId={pendingConvId} onConvSelected={() => setPendingConvId(null)} onMessagesRead={handleMessagesRead} onNewMessage={fetchUnreadCount} registerIncrementBadge={registerIncrementBadge} />
+      case "chat-assignment":
+        return <ChatAssignment />
       case "customers":
         return <CustomerManagement onNavigateToChat={(convId) => { setPendingConvId(convId); setActiveTab("chat"); }} />
       case "workflows":
@@ -149,6 +152,8 @@ export function AdminDashboard() {
     switch (activeTab) {
       case "chat":
         return "Chat en Vivo"
+      case "chat-assignment":
+        return "Asignacion de Chats"
       case "customers":
         return "Gestion de Clientes"
       case "workflows":

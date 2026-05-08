@@ -269,12 +269,22 @@ export const conversacionesApi = {
     return handleResponse<Record<string, unknown>[]>(response);
   },
 
-  // GET /api/conversaciones/pendientes
-  pendientes: async () => {
-    const response = await fetch(`${API_BASE_URL}/conversaciones/pendientes`, {
+  // GET /api/conversaciones/pendientes/:empresaId
+  pendientes: async (empresaId: number) => {
+    const response = await fetch(`${API_BASE_URL}/conversaciones/pendientes/${empresaId}`, {
       headers: getAuthHeaders(),
     });
     return handleResponse<Record<string, unknown>[]>(response);
+  },
+
+  // PATCH /api/conversaciones/:id/asignar
+  asignar: async (id: number, empleadoId: number) => {
+    const response = await fetch(`${API_BASE_URL}/conversaciones/${id}/asignar`, {
+      method: "PATCH",
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ empleadoId }),
+    });
+    return handleResponse<Record<string, unknown>>(response);
   },
 };
 
@@ -378,6 +388,14 @@ export const empleadosApi = {
       headers: getAuthHeaders(),
     });
     return handleResponse<Record<string, unknown>>(response);
+  },
+
+  // GET /api/empleados/:empresaId/empresa
+  porEmpresa: async (empresaId: number) => {
+    const response = await fetch(`${API_BASE_URL}/empleados/${empresaId}/empresa`, {
+      headers: getAuthHeaders(),
+    });
+    return handleResponse<Record<string, unknown>[]>(response);
   },
 
   // POST /api/empleados

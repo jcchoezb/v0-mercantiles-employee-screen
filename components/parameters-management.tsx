@@ -572,16 +572,15 @@ export function ParametersManagement() {
                             <Power className="h-4 w-4" />
                           )}
                         </Button>
-                        {parametro.esEditable && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleOpenDialog(parametro)}
-                            className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                          >
-                            <Edit2 className="h-4 w-4" />
-                          </Button>
-                        )}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleOpenDialog(parametro)}
+                          className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                          title="Editar"
+                        >
+                          <Edit2 className="h-4 w-4" />
+                        </Button>
                         <Button
                           variant="ghost"
                           size="icon"
@@ -645,16 +644,15 @@ export function ParametersManagement() {
                         <Power className="h-4 w-4" />
                       )}
                     </Button>
-                    {parametro.esEditable && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleOpenDialog(parametro)}
-                        className="h-8 w-8"
-                      >
-                        <Edit2 className="h-4 w-4" />
-                      </Button>
-                    )}
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleOpenDialog(parametro)}
+                      className="h-8 w-8"
+                      title="Editar"
+                    >
+                      <Edit2 className="h-4 w-4" />
+                    </Button>
                     <Button
                       variant="ghost"
                       size="icon"

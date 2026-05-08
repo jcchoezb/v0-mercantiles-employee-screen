@@ -105,10 +105,15 @@ export function AdminDashboard() {
     }
   }, [fetchUnreadCount, fetchConversationIds, conversationIds])
 
+  // Callback para restar mensajes leídos del badge total
+  const handleMessagesRead = useCallback((count: number) => {
+    setChatBadge((prev) => Math.max(0, prev - count))
+  }, [])
+
   const renderContent = () => {
     switch (activeTab) {
       case "chat":
-        return <ChatSupport autoSelectConvId={pendingConvId} onConvSelected={() => setPendingConvId(null)} />
+        return <ChatSupport autoSelectConvId={pendingConvId} onConvSelected={() => setPendingConvId(null)} onMessagesRead={handleMessagesRead} />
       case "customers":
         return <CustomerManagement onNavigateToChat={(convId) => { setPendingConvId(convId); setActiveTab("chat"); }} />
       case "workflows":

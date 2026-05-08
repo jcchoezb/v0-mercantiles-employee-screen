@@ -31,10 +31,9 @@ import {
 interface ChatSupportProps {
   autoSelectConvId?: string | null
   onConvSelected?: () => void
-  onMessagesRead?: (count: number) => void
 }
 
-export function ChatSupport({ autoSelectConvId, onConvSelected, onMessagesRead }: ChatSupportProps) {
+export function ChatSupport({ autoSelectConvId, onConvSelected }: ChatSupportProps) {
   const { employee } = useAuth()
   const [conversations, setConversations] = useState<ChatConversation[]>([])
   const [selectedConversation, setSelectedConversation] = useState<ChatConversation | null>(null)
@@ -292,17 +291,12 @@ export function ChatSupport({ autoSelectConvId, onConvSelected, onMessagesRead }
     chatWebSocket.subscribeToConversation(Number(conv.id), handleWebSocketMessage)
 
     // Mark all messages as read when conversation is opened
-    const unreadCount = conv.mensajesNoLeidos || 0
     try {
       await mensajesApi.leerTodos(Number(conv.id))
       // Update conversation list to reflect read messages
       setConversations((prev) =>
         prev.map((c) => (c.id === conv.id ? { ...c, mensajesNoLeidos: 0 } : c))
       )
-      // Notificar al componente padre para restar del badge total
-      if (onMessagesRead && unreadCount > 0) {
-        onMessagesRead(unreadCount)
-      }
     } catch {
       // silently fail
     }

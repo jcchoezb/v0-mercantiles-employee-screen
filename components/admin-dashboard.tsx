@@ -113,7 +113,7 @@ export function AdminDashboard() {
   const renderContent = () => {
     switch (activeTab) {
       case "chat":
-        return <ChatSupport autoSelectConvId={pendingConvId} onConvSelected={() => setPendingConvId(null)} onMessagesRead={handleMessagesRead} />
+        return <ChatSupport autoSelectConvId={pendingConvId} onConvSelected={() => setPendingConvId(null)} onMessagesRead={handleMessagesRead} onNewMessage={fetchUnreadCount} />
       case "customers":
         return <CustomerManagement onNavigateToChat={(convId) => { setPendingConvId(convId); setActiveTab("chat"); }} />
       case "workflows":

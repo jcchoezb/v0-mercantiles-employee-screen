@@ -32,9 +32,10 @@ interface ChatSupportProps {
   autoSelectConvId?: string | null
   onConvSelected?: () => void
   onMessagesRead?: (count: number) => void
+  onNewMessage?: () => void
 }
 
-export function ChatSupport({ autoSelectConvId, onConvSelected, onMessagesRead }: ChatSupportProps) {
+export function ChatSupport({ autoSelectConvId, onConvSelected, onMessagesRead, onNewMessage }: ChatSupportProps) {
   const { employee } = useAuth()
   const [conversations, setConversations] = useState<ChatConversation[]>([])
   const [selectedConversation, setSelectedConversation] = useState<ChatConversation | null>(null)
@@ -258,10 +259,20 @@ export function ChatSupport({ autoSelectConvId, onConvSelected, onMessagesRead }
       const index = prev.findIndex((c) => c.id === mappedConversation.id)
       if (index === -1) {
         // Nueva conversación - agregar al inicio
+        // Notificar si tiene mensajes no leídos
+        if (mappedConversation.mensajesNoLeidos && mappedConversation.mensajesNoLeidos > 0 && onNewMessage) {
+          onNewMessage()
+        }
         return [mappedConversation, ...prev]
       } else {
         // Actualizar conversación existente
         const updated = [...prev]
+        const prevUnread = updated[index].mensajesNoLeidos || 0
+        const newUnread = mappedConversation.mensajesNoLeidos || 0
+        // Notificar si aumentaron los mensajes no leídos
+        if (newUnread > prevUnread && onNewMessage) {
+          onNewMessage()
+        }
         // Preservar mensajes si la conversación está seleccionada
         updated[index] = {
           ...mappedConversation,
@@ -270,7 +281,7 @@ export function ChatSupport({ autoSelectConvId, onConvSelected, onMessagesRead }
         return updated
       }
     })
-  }, [])
+  }, [onNewMessage])
 
   const handleSelectConversation = async (conv: ChatConversation) => {
     // Desuscribirse de la conversación anterior si existe
@@ -293,18 +304,21 @@ export function ChatSupport({ autoSelectConvId, onConvSelected, onMessagesRead }
 
     // Mark all messages as read when conversation is opened
     const unreadCount = conv.mensajesNoLeidos || 0
+    console.log("[v0] handleSelectConversation - unreadCount:", unreadCount, "conv.mensajesNoLeidos:", conv.mensajesNoLeidos)
     try {
       await mensajesApi.leerTodos(Number(conv.id))
+      console.log("[v0] leerTodos success - calling onMessagesRead with:", unreadCount)
       // Update conversation list to reflect read messages
       setConversations((prev) =>
         prev.map((c) => (c.id === conv.id ? { ...c, mensajesNoLeidos: 0 } : c))
       )
       // Notificar al componente padre para restar del badge total
       if (onMessagesRead && unreadCount > 0) {
+        console.log("[v0] calling onMessagesRead callback")
         onMessagesRead(unreadCount)
       }
-    } catch {
-      // silently fail
+    } catch (err) {
+      console.log("[v0] leerTodos error:", err)
     }
   }
 

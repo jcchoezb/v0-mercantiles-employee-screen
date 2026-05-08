@@ -75,7 +75,10 @@ export function ChatSupport({ autoSelectConvId, onConvSelected, onMessagesRead, 
 
   const fetchConversations = useCallback(async () => {
     try {
-      const data = await conversacionesApi.listar()
+      // Si el rol es admin, usar listar(). Si es asesor (agent), usar porEmpleado()
+      const data = employee?.role === "admin" 
+        ? await conversacionesApi.listar()
+        : await conversacionesApi.porEmpleado(Number(employee?.id))
       const mapped: ChatConversation[] = (data as Record<string, unknown>[]).map((c) => {
         const cliente = c.cliente as Record<string, unknown> | undefined
         const clienteNombre = String(c.clienteNombre ?? cliente?.nombre ?? "Sin nombre")
@@ -103,7 +106,7 @@ export function ChatSupport({ autoSelectConvId, onConvSelected, onMessagesRead, 
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Error al cargar conversaciones")
     }
-  }, [])
+  }, [employee?.role, employee?.id])
 
   const fetchMessages = useCallback(async (convId: string, page: number = 0, existingMessages: ChatMessage[] = []) => {
     try {
@@ -328,21 +331,18 @@ export function ChatSupport({ autoSelectConvId, onConvSelected, onMessagesRead, 
 
     // Mark all messages as read when conversation is opened
     const unreadCount = conv.mensajesNoLeidos || 0
-    console.log("[v0] handleSelectConversation - unreadCount:", unreadCount, "conv.mensajesNoLeidos:", conv.mensajesNoLeidos)
     try {
       await mensajesApi.leerTodos(Number(conv.id))
-      console.log("[v0] leerTodos success - calling onMessagesRead with:", unreadCount)
       // Update conversation list to reflect read messages
       setConversations((prev) =>
         prev.map((c) => (c.id === conv.id ? { ...c, mensajesNoLeidos: 0 } : c))
       )
       // Notificar al componente padre para restar del badge total
       if (onMessagesRead && unreadCount > 0) {
-        console.log("[v0] calling onMessagesRead callback")
         onMessagesRead(unreadCount)
       }
-    } catch (err) {
-      console.log("[v0] leerTodos error:", err)
+    } catch {
+      // silently fail
     }
   }
 

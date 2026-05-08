@@ -781,7 +781,8 @@ export function ParametersManagement() {
                 value={formData.valor}
                 onChange={(e) => setFormData({ ...formData, valor: e.target.value })}
                 placeholder="Ingresa el valor del parámetro"
-                className="bg-input border-border text-foreground font-mono min-h-[80px]"
+                className="bg-input border-border text-foreground font-mono min-h-[80px] break-all whitespace-pre-wrap resize-y"
+                style={{ wordBreak: "break-all", overflowWrap: "anywhere" }}
               />
             </div>
             

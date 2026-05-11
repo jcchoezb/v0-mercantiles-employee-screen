@@ -34,7 +34,7 @@ export function LoginForm() {
             <Building2 className="h-8 w-8 text-primary-foreground" />
           </div>
           <div>
-            <CardTitle className="text-2xl font-bold text-foreground">Mercantiles</CardTitle>
+            <CardTitle className="text-2xl font-bold text-foreground">TipingIA</CardTitle>
             <CardDescription className="text-muted-foreground">
               Panel de Administración
             </CardDescription>

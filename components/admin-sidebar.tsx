@@ -79,7 +79,7 @@ function SidebarContent({
             <Building2 className="h-5 w-5 text-sidebar-primary-foreground" />
           </div>
           {(!collapsed || isMobile) && (
-            <span className="font-semibold text-sidebar-foreground">Mercantiles</span>
+            <span className="font-semibold text-sidebar-foreground">TipingIA</span>
           )}
         </div>
         {!isMobile && (

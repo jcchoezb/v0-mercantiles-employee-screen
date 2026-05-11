@@ -194,7 +194,7 @@ export function AdminDashboard() {
           <header className="mb-6">
             <h1 className="text-xl md:text-2xl font-bold text-foreground">{getPageTitle()}</h1>
             <p className="text-sm md:text-base text-muted-foreground">
-              Panel de administracion - Mercantiles
+              Panel de administracion - TipingIA
             </p>
           </header>
           {renderContent()}

@@ -10,8 +10,8 @@ const _geist = Geist({ subsets: ["latin"] });
 const _geistMono = Geist_Mono({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: 'TipingIA - Panel de Administración',
-  description: 'Panel de administración para empleados de TipingIA',
+  title: 'Mercantiles - Panel de Administración',
+  description: 'Panel de administración para empleados de Mercantiles',
   generator: 'v0.app',
   icons: {
     icon: [

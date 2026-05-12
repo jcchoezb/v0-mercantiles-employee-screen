@@ -99,6 +99,8 @@ export function ChatSupport({ autoSelectConvId, onConvSelected, onMessagesRead, 
           lastMessage: String(c.ultimoMensaje ?? c.tema ?? ""),
           mensajesNoLeidos: c.mensajesNoLeidos ? Number(c.mensajesNoLeidos) : 0,
           modoAtencion: (c.modoAtencion as "BOT" | "HUMANO") ?? "HUMANO",
+          empleadoId: c.empleadoId ? Number(c.empleadoId) : undefined,
+          empleadoNombre: c.empleadoNombre ? String(c.empleadoNombre) : undefined,
         }
       })
       setConversations(mapped)
@@ -280,6 +282,8 @@ export function ChatSupport({ autoSelectConvId, onConvSelected, onMessagesRead, 
       lastMessage: String(conversacion.ultimoMensaje ?? conversacion.tema ?? ""),
       mensajesNoLeidos: conversacion.mensajesNoLeidos ? Number(conversacion.mensajesNoLeidos) : 0,
       modoAtencion: (conversacion.modoAtencion as "BOT" | "HUMANO") ?? "HUMANO",
+      empleadoId: conversacion.empleadoId ? Number(conversacion.empleadoId) : undefined,
+      empleadoNombre: conversacion.empleadoNombre ? String(conversacion.empleadoNombre) : undefined,
     }
 
     setConversations((prev) => {
@@ -500,7 +504,14 @@ export function ChatSupport({ autoSelectConvId, onConvSelected, onMessagesRead, 
                       </span>
                       {getStatusBadge(conv.status)}
                     </div>
-                    <p className="text-xs text-muted-foreground truncate">{conv.source}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="text-xs text-muted-foreground truncate">{conv.source}</p>
+                      {conv.empleadoNombre && (
+                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 bg-primary/10 text-primary border-primary/30">
+                          {conv.empleadoNombre.split(" ")[0]}
+                        </Badge>
+                      )}
+                    </div>
                     <p className="text-xs text-muted-foreground truncate mt-1">
                       {conv.lastMessage}
                     </p>
@@ -550,6 +561,11 @@ export function ChatSupport({ autoSelectConvId, onConvSelected, onMessagesRead, 
                   <h3 className="font-semibold text-foreground text-sm md:text-base truncate">
                     {selectedConversation.customer.name}
                   </h3>
+                  {selectedConversation.empleadoNombre && (
+                    <p className="text-[10px] text-primary truncate">
+                      Asignado a: {selectedConversation.empleadoNombre}
+                    </p>
+                  )}
                   <p className="text-xs text-muted-foreground truncate">
                     <span className="hidden sm:inline">{selectedConversation.customer.phone} | </span>
                     {selectedConversation.source}
@@ -632,18 +648,16 @@ export function ChatSupport({ autoSelectConvId, onConvSelected, onMessagesRead, 
                           key={`msg-${message.id}-${index}`}
                           className={cn(
                             "flex gap-2 md:gap-3",
-                            message.sender === "agent" && "flex-row-reverse"
+                            (message.sender === "agent" || message.sender === "bot") && "flex-row-reverse"
                           )}
                         >
                           <Avatar className="h-7 w-7 md:h-8 md:w-8 flex-shrink-0">
                             <AvatarFallback
                               className={cn(
                                 "text-xs",
-                                message.sender === "bot"
-                                  ? "bg-secondary text-secondary-foreground"
-                                  : message.sender === "agent"
-                                    ? "bg-primary text-primary-foreground"
-                                    : "bg-muted text-muted-foreground"
+                                (message.sender === "bot" || message.sender === "agent")
+                                  ? "bg-primary text-primary-foreground"
+                                  : "bg-muted text-muted-foreground"
                               )}
                             >
                               {getSenderIcon(message.sender)}
@@ -652,11 +666,9 @@ export function ChatSupport({ autoSelectConvId, onConvSelected, onMessagesRead, 
                           <div
                             className={cn(
                               "max-w-[80%] md:max-w-[70%] rounded-lg p-2 md:p-3",
-                              message.sender === "agent"
+                              (message.sender === "agent" || message.sender === "bot")
                                 ? "bg-primary text-primary-foreground"
-                                : message.sender === "bot"
-                                  ? "bg-secondary text-secondary-foreground"
-                                  : "bg-muted text-muted-foreground"
+                                : "bg-muted text-muted-foreground"
                             )}
                           >
                             {message.senderName && (

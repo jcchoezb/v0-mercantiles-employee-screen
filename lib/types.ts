@@ -49,6 +49,8 @@ export interface ChatConversation {
   modoAtencion?: "BOT" | "HUMANO"
   empleadoId?: number
   empleadoNombre?: string
+  updatedAt?: string
+  estado?: string
 }
 
 export interface ChatbotRecord {

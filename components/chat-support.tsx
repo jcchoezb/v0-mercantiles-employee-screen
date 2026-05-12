@@ -24,6 +24,7 @@ import {
   User,
   Headphones,
   ArrowLeft,
+  XCircle,
 } from "lucide-react"
 
 interface ChatSupportProps {
@@ -40,6 +41,7 @@ export function ChatSupport({ autoSelectConvId, onConvSelected, onMessagesRead, 
   const [selectedConversation, setSelectedConversation] = useState<ChatConversation | null>(null)
   const [newMessage, setNewMessage] = useState("")
   const [searchTerm, setSearchTerm] = useState("")
+  const [filterTab, setFilterTab] = useState<"all" | "unassigned" | "assigned" | "unread" | "closed">("all")
   const [showConversationList, setShowConversationList] = useState(true)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const scrollAreaRef = useRef<HTMLDivElement>(null)
@@ -101,6 +103,8 @@ export function ChatSupport({ autoSelectConvId, onConvSelected, onMessagesRead, 
           modoAtencion: (c.modoAtencion as "BOT" | "HUMANO") ?? "HUMANO",
           empleadoId: c.empleadoId ? Number(c.empleadoId) : undefined,
           empleadoNombre: c.empleadoNombre ? String(c.empleadoNombre) : undefined,
+          updatedAt: String(c.updatedAt ?? c.createdAt ?? new Date().toISOString()),
+          estado: String(c.estado ?? ""),
         }
       })
       setConversations(mapped)
@@ -224,11 +228,71 @@ export function ChatSupport({ autoSelectConvId, onConvSelected, onMessagesRead, 
     return result
   }
 
-  const filteredConversations = conversations.filter(
-    (conv) =>
-      conv.customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+  // Función para cerrar conversación
+  const handleCloseConversation = async () => {
+    if (!selectedConversation) return
+    try {
+      await conversacionesApi.cerrar(Number(selectedConversation.id))
+      // Actualizar la conversación en la lista
+      setConversations((prev) =>
+        prev.map((c) => c.id === selectedConversation.id ? { ...c, estado: "cerrada", status: "resolved" as const } : c)
+      )
+      setSelectedConversation((prev) => prev ? { ...prev, estado: "cerrada", status: "resolved" as const } : prev)
+      toast.success("Conversación cerrada")
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Error al cerrar conversación")
+    }
+  }
+
+  // Función para formatear hora en formato 9:46 a.m. o p.m.
+  const formatTime = (dateString: string) => {
+    try {
+      const date = new Date(dateString.replace(" ", "T"))
+      const hours = date.getHours()
+      const minutes = date.getMinutes()
+      const ampm = hours >= 12 ? "p.m." : "a.m."
+      const hour12 = hours % 12 || 12
+      return `${hour12}:${minutes.toString().padStart(2, "0")} ${ampm}`
+    } catch {
+      return ""
+    }
+  }
+
+  // Contadores para los filtros
+  const filterCounts = {
+    all: conversations.length,
+    unassigned: conversations.filter((c) => !c.empleadoId).length,
+    assigned: conversations.filter((c) => c.empleadoId).length,
+    unread: conversations.filter((c) => (c.mensajesNoLeidos || 0) > 0).length,
+    closed: conversations.filter((c) => c.estado === "cerrada").length,
+  }
+
+  const filteredConversations = conversations.filter((conv) => {
+    // Filtro por búsqueda
+    const matchesSearch = conv.customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       conv.source.toLowerCase().includes(searchTerm.toLowerCase())
-  )
+    
+    // Filtro por tab
+    let matchesTab = true
+    switch (filterTab) {
+      case "unassigned":
+        matchesTab = !conv.empleadoId
+        break
+      case "assigned":
+        matchesTab = !!conv.empleadoId
+        break
+      case "unread":
+        matchesTab = (conv.mensajesNoLeidos || 0) > 0
+        break
+      case "closed":
+        matchesTab = conv.estado === "cerrada"
+        break
+      default:
+        matchesTab = true
+    }
+    
+    return matchesSearch && matchesTab
+  })
 
   // Callback para mensajes en tiempo real de la conversación seleccionada
   const handleWebSocketMessage = useCallback((mensaje: MensajeWebSocket) => {
@@ -284,6 +348,8 @@ export function ChatSupport({ autoSelectConvId, onConvSelected, onMessagesRead, 
       modoAtencion: (conversacion.modoAtencion as "BOT" | "HUMANO") ?? "HUMANO",
       empleadoId: conversacion.empleadoId ? Number(conversacion.empleadoId) : undefined,
       empleadoNombre: conversacion.empleadoNombre ? String(conversacion.empleadoNombre) : undefined,
+      updatedAt: String(conversacion.updatedAt ?? conversacion.createdAt ?? new Date().toISOString()),
+      estado: String(conversacion.estado ?? ""),
     }
 
     setConversations((prev) => {
@@ -463,8 +529,11 @@ export function ChatSupport({ autoSelectConvId, onConvSelected, onMessagesRead, 
         )}
       >
         <div className="p-3 md:p-4 border-b border-border flex-shrink-0">
-          <h2 className="font-semibold text-foreground mb-3 text-sm md:text-base">Conversaciones</h2>
-          <div className="relative">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="font-semibold text-foreground text-sm md:text-base">Conversaciones</h2>
+            <Badge variant="secondary" className="text-xs">{filterCounts.all}</Badge>
+          </div>
+          <div className="relative mb-3">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Buscar cliente o fuente..."
@@ -472,6 +541,53 @@ export function ChatSupport({ autoSelectConvId, onConvSelected, onMessagesRead, 
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-10 bg-input border-border text-foreground placeholder:text-muted-foreground text-sm"
             />
+          </div>
+          <div className="flex flex-wrap gap-1">
+            <button
+              onClick={() => setFilterTab("all")}
+              className={cn(
+                "px-2 py-1 text-[10px] rounded-full transition-colors",
+                filterTab === "all" ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
+              )}
+            >
+              Todos
+            </button>
+            <button
+              onClick={() => setFilterTab("unassigned")}
+              className={cn(
+                "px-2 py-1 text-[10px] rounded-full transition-colors",
+                filterTab === "unassigned" ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
+              )}
+            >
+              No Asignados ({filterCounts.unassigned})
+            </button>
+            <button
+              onClick={() => setFilterTab("assigned")}
+              className={cn(
+                "px-2 py-1 text-[10px] rounded-full transition-colors",
+                filterTab === "assigned" ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
+              )}
+            >
+              Asignados ({filterCounts.assigned})
+            </button>
+            <button
+              onClick={() => setFilterTab("unread")}
+              className={cn(
+                "px-2 py-1 text-[10px] rounded-full transition-colors",
+                filterTab === "unread" ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
+              )}
+            >
+              No Leidos ({filterCounts.unread})
+            </button>
+            <button
+              onClick={() => setFilterTab("closed")}
+              className={cn(
+                "px-2 py-1 text-[10px] rounded-full transition-colors",
+                filterTab === "closed" ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
+              )}
+            >
+              Cerradas ({filterCounts.closed})
+            </button>
           </div>
         </div>
         <div className="flex-1 min-h-0 overflow-hidden">
@@ -502,7 +618,9 @@ export function ChatSupport({ autoSelectConvId, onConvSelected, onMessagesRead, 
                       <span className="font-medium text-foreground text-sm truncate">
                         {conv.customer.name}
                       </span>
-                      {getStatusBadge(conv.status)}
+                      <span className="text-[10px] text-muted-foreground flex-shrink-0">
+                        {conv.updatedAt && formatTime(conv.updatedAt)}
+                      </span>
                     </div>
                     <div className="flex items-center gap-2">
                       <p className="text-xs text-muted-foreground truncate">{conv.source}</p>
@@ -573,7 +691,17 @@ export function ChatSupport({ autoSelectConvId, onConvSelected, onMessagesRead, 
                 </div>
               </div>
               <div className="flex items-center gap-2 md:gap-3 flex-shrink-0">
-                {getStatusBadge(selectedConversation.status)}
+                {selectedConversation.estado !== "cerrada" && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={handleCloseConversation}
+                    className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                    title="Cerrar conversación"
+                  >
+                    <XCircle className="h-5 w-5" />
+                  </Button>
+                )}
                 <label className="flex items-center gap-2 cursor-pointer group">
                   <span className="text-xs text-muted-foreground hidden sm:inline">Asistente IA</span>
                   <button

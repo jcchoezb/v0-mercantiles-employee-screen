@@ -106,8 +106,8 @@ export function EmployeeManagement() {
         email: String(e.email ?? ""),
         telefono: String(e.telefono ?? ""),
         departamento: String(e.departamento ?? ""),
-        rol: String((e.rol as Record<string, unknown>)?.nombre ?? e.rolNombre ?? "Sin rol"),
-        rolId: Number((e.rol as Record<string, unknown>)?.id ?? e.rolId ?? 1),
+        rol: String(e.rol ?? ""),
+        rolId: Number(e.rolId ?? 0),
         activo: Boolean(e.activo),
         fechaCreacion: String(e.fechaCreacion ?? ""),
       }))
@@ -201,6 +201,7 @@ export function EmployeeManagement() {
           departamento: formData.departamento,
           rolId: formData.rolId,
           activo: formData.activo,
+          empresaId: 1, // por defecto
         }
         if (formData.password) {
           updateData.password = formData.password
@@ -215,6 +216,7 @@ export function EmployeeManagement() {
           departamento: formData.departamento,
           rolId: formData.rolId,
           activo: formData.activo,
+          empresaId: 1, // por defecto
         })
       }
       setIsDialogOpen(false)

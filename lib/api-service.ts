@@ -409,6 +409,7 @@ export const empleadosApi = {
     rol: string;
     departamento?: string;
     telefono?: string;
+    empresaId?: number;
   }) => {
     const response = await fetch(`${API_BASE_URL}/empleados`, {
       method: "POST",

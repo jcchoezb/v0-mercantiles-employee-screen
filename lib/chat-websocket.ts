@@ -1,4 +1,4 @@
-import { Client, IMessage } from "@stomp/stompjs";
+/*import { Client, IMessage } from "@stomp/stompjs";
 import SockJS from "sockjs-client";
 
 // URL del WebSocket - ajustar según el entorno
@@ -216,5 +216,217 @@ class ChatWebSocket {
 }
 
 // Exportar instancia singleton
+const chatWebSocket = new ChatWebSocket();
+export default chatWebSocket;
+*/
+import { Client, IMessage } from "@stomp/stompjs";
+
+// URL base desde variable de entorno (ej: "http://localhost:8080/api/ws-chat" o "https://...")
+const WS_URL_BASE = process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:8080/api/ws-chat/websocket";
+// Convertir a WS/WSS automáticamente (http -> ws, https -> wss)
+const WS_URL = WS_URL_BASE.replace(/^http/, 'ws');
+
+export interface MensajeWebSocket {
+  id?: number;
+  conversacionId: number;
+  contenido: string;
+  remitenteTipo: "empleado" | "cliente" | "bot" | "sistema";
+  remitenteId?: number;
+  remitenteNombre?: string;
+  tipoContenido?: string;
+  tipoEvento?: string;
+  createdAt?: string;
+  leido?: boolean;
+}
+
+class ChatWebSocket {
+  private stompClient: Client | null = null;
+  private messageSubscription: { unsubscribe: () => void } | null = null;
+  private conversationSubscription: { unsubscribe: () => void } | null = null;
+  private onMessageCallback: ((mensaje: MensajeWebSocket) => void) | null = null;
+  private onConversationUpdateCallback: ((data: Record<string, unknown>) => void) | null = null;
+  private currentConversationId: number | null = null;
+  private isConnected: boolean = false;
+
+  // Conectar globalmente (solo escucha actualizaciones de conversaciones)
+  connectGlobal(onConversationUpdate: (data: Record<string, unknown>) => void) {
+    if (this.isConnected && this.stompClient) {
+      this.onConversationUpdateCallback = onConversationUpdate;
+      return;
+    }
+
+    this.disconnect();
+    this.onConversationUpdateCallback = onConversationUpdate;
+
+    this.stompClient = new Client({
+      brokerURL: WS_URL,              // WebSocket nativo (sin SockJS)
+      reconnectDelay: 5000,
+      heartbeatIncoming: 4000,
+      heartbeatOutgoing: 4000,
+      onConnect: () => {
+        console.log("[WebSocket] Conectado globalmente a /topic/conversaciones");
+        this.isConnected = true;
+
+        if (this.stompClient) {
+          this.conversationSubscription = this.stompClient.subscribe(
+            `/topic/conversaciones`,
+            (message: IMessage) => {
+              const data = JSON.parse(message.body);
+              if (this.onConversationUpdateCallback) {
+                this.onConversationUpdateCallback(data);
+              }
+            }
+          );
+        }
+      },
+      onDisconnect: () => {
+        console.log("[WebSocket] Desconectado");
+        this.isConnected = false;
+      },
+      onStompError: (frame) => {
+        console.error("[WebSocket] Error STOMP:", frame.headers["message"]);
+        this.isConnected = false;
+      },
+    });
+
+    this.stompClient.activate();
+  }
+
+  // Suscribirse a una conversación específica (requiere conexión global previa)
+  subscribeToConversation(
+    conversationId: number,
+    onMessageReceived: (mensaje: MensajeWebSocket) => void
+  ) {
+    this.currentConversationId = conversationId;
+    this.onMessageCallback = onMessageReceived;
+
+    if (this.stompClient && this.isConnected) {
+      if (this.messageSubscription) {
+        this.messageSubscription.unsubscribe();
+        this.messageSubscription = null;
+      }
+
+      console.log(`[WebSocket] Suscribiendo a /topic/conversacion/${conversationId}/mensajes`);
+      this.messageSubscription = this.stompClient.subscribe(
+        `/topic/conversacion/${conversationId}/mensajes`,
+        (message: IMessage) => {
+          const nuevoMensaje: MensajeWebSocket = JSON.parse(message.body);
+          if (this.onMessageCallback) {
+            this.onMessageCallback(nuevoMensaje);
+          }
+        }
+      );
+    }
+  }
+
+  // Desuscribirse de la conversación actual (pero mantener conexión global)
+  unsubscribeFromConversation() {
+    if (this.messageSubscription) {
+      this.messageSubscription.unsubscribe();
+      this.messageSubscription = null;
+    }
+    this.currentConversationId = null;
+    this.onMessageCallback = null;
+  }
+
+  // Conectar y suscribirse directamente a una conversación (incluye global)
+  connect(
+    conversationId: number,
+    onMessageReceived: (mensaje: MensajeWebSocket) => void,
+    onConversationUpdate?: (data: Record<string, unknown>) => void
+  ) {
+    this.disconnect();
+    this.currentConversationId = conversationId;
+    this.onMessageCallback = onMessageReceived;
+    this.onConversationUpdateCallback = onConversationUpdate || null;
+
+    this.stompClient = new Client({
+      brokerURL: WS_URL,
+      reconnectDelay: 5000,
+      heartbeatIncoming: 4000,
+      heartbeatOutgoing: 4000,
+      onConnect: () => {
+        console.log(
+          `[WebSocket] Conectado. Suscribiendo a /topic/conversacion/${conversationId}/mensajes`
+        );
+        this.isConnected = true;
+
+        if (this.stompClient) {
+          this.messageSubscription = this.stompClient.subscribe(
+            `/topic/conversacion/${conversationId}/mensajes`,
+            (message: IMessage) => {
+              const nuevoMensaje: MensajeWebSocket = JSON.parse(message.body);
+              if (this.onMessageCallback) {
+                this.onMessageCallback(nuevoMensaje);
+              }
+            }
+          );
+
+          this.conversationSubscription = this.stompClient.subscribe(
+            `/topic/conversaciones`,
+            (message: IMessage) => {
+              const data = JSON.parse(message.body);
+              if (this.onConversationUpdateCallback) {
+                this.onConversationUpdateCallback(data);
+              }
+            }
+          );
+        }
+      },
+      onDisconnect: () => {
+        console.log("[WebSocket] Desconectado");
+        this.isConnected = false;
+      },
+      onStompError: (frame) => {
+        console.error("[WebSocket] Error STOMP:", frame.headers["message"]);
+        this.isConnected = false;
+      },
+    });
+
+    this.stompClient.activate();
+  }
+
+  // Desconectar y limpiar todo
+  disconnect() {
+    if (this.messageSubscription) {
+      this.messageSubscription.unsubscribe();
+      this.messageSubscription = null;
+    }
+    if (this.conversationSubscription) {
+      this.conversationSubscription.unsubscribe();
+      this.conversationSubscription = null;
+    }
+    if (this.stompClient) {
+      this.stompClient.deactivate();
+      this.stompClient = null;
+    }
+    this.currentConversationId = null;
+    this.onMessageCallback = null;
+    this.onConversationUpdateCallback = null;
+    this.isConnected = false;
+  }
+
+  // Enviar mensaje por WebSocket
+  sendMessage(conversationId: number, mensajeRequest: Partial<MensajeWebSocket>) {
+    if (this.stompClient && this.isConnected) {
+      this.stompClient.publish({
+        destination: `/app/chat/${conversationId}`,
+        body: JSON.stringify(mensajeRequest),
+      });
+      return true;
+    }
+    console.warn("[WebSocket] No conectado, usando REST fallback");
+    return false;
+  }
+
+  getIsConnected(): boolean {
+    return this.isConnected;
+  }
+
+  getCurrentConversationId(): number | null {
+    return this.currentConversationId;
+  }
+}
+
 const chatWebSocket = new ChatWebSocket();
 export default chatWebSocket;

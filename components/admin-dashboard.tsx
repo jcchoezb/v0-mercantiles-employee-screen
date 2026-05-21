@@ -454,12 +454,12 @@ export function AdminDashboard() {
       // silently fail
     }
   }, [])
-
+/*
   useEffect(() => {
     fetchUnreadCount()
     const interval = setInterval(fetchUnreadCount, 30000)
     return () => clearInterval(interval)
-  }, [fetchUnreadCount])
+  }, [fetchUnreadCount])*/
 
   const stompClientRef = useRef<Client | null>(null)
   const [conversationIds, setConversationIds] = useState<number[]>([])

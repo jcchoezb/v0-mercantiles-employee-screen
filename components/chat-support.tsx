@@ -1333,13 +1333,13 @@ useEffect(() => {
     // Registrar callback para actualizaciones de lista de conversaciones
     chatWebSocket.setGlobalUpdateCallback(handleConversationUpdate)
     // Conectar si no lo está
-    chatWebSocket.connect()
+   //chatWebSocket.connect()
     return () => {
       // Limpiar: desuscribir conversación activa y desconectar (opcional, pero admin-dashboard ya lo hace)
       if (selectedConversation) {
         chatWebSocket.unsubscribeFromConversation(Number(selectedConversation.id))
       }
-      chatWebSocket.disconnect()
+      //chatWebSocket.disconnect()
     }
   }, [handleConversationUpdate, selectedConversation])
 

@@ -687,9 +687,7 @@ export interface MensajeWebSocket {
 }
 
 function getAuthToken(): string | null {
-  if (typeof window !== "undefined") {
-    return localStorage.getItem("auth_token");
-  }
+  if (typeof window !== "undefined") return localStorage.getItem("auth_token");
   return null;
 }
 
@@ -698,98 +696,108 @@ class ChatWebSocket {
   private subscriptions = new Map<number, { unsubscribe: () => void }>();
   private globalSubscription: { unsubscribe: () => void } | null = null;
   private isConnected = false;
+  private isConnecting = false;
 
-  // Callbacks externos
   private onGlobalUpdate: ((data: unknown) => void) | null = null;
   private onMessageCallbacks = new Map<number, (msg: MensajeWebSocket) => void>();
 
-  // Iniciar conexión única
+  // Conectar una sola vez, sin reintentos
   connect() {
-    if (this.stompClient?.connected || this.isConnected) {
-      console.log("[WebSocket] Ya conectado, no se crea nueva conexión");
+    if (this.isConnected || this.isConnecting) {
+      console.log("[WebSocket] Ya conectado o en proceso, ignorando");
       return;
     }
 
     const token = getAuthToken();
     if (!token) {
-      console.warn("[WebSocket] No hay token, esperando autenticación...");
+      console.warn("[WebSocket] No hay token, no se puede conectar");
       return;
     }
 
-    console.log("[WebSocket] Iniciando conexión única...");
+    if (this.stompClient) {
+      this.cleanup();
+    }
+
+    this.isConnecting = true;
+    console.log("[WebSocket] Iniciando conexión (sin reintentos)...");
+
     this.stompClient = new Client({
       brokerURL: WS_URL,
       connectHeaders: { Authorization: `Bearer ${token}` },
-      reconnectDelay: 5000,
+      // Deshabilitar reconexión automática
+      reconnectDelay: 0,
       heartbeatIncoming: 4000,
       heartbeatOutgoing: 4000,
       onConnect: () => {
-        console.log("[WebSocket] ✅ Conectado exitosamente (única instancia)");
+        if (!this.stompClient || !this.stompClient.connected) {
+          this.isConnected = false;
+          this.isConnecting = false;
+          return;
+        }
+        console.log("[WebSocket] ✅ Conectado exitosamente");
         this.isConnected = true;
+        this.isConnecting = false;
 
-        // Suscripción global (una sola vez)
-        this.globalSubscription = this.stompClient!.subscribe(
-          "/topic/conversaciones",
-          (msg: IMessage) => {
-            const data = JSON.parse(msg.body);
-            this.onGlobalUpdate?.(data);
-          }
-        );
+        try {
+          this.globalSubscription = this.stompClient.subscribe("/topic/conversaciones", (msg) => {
+            this.onGlobalUpdate?.(JSON.parse(msg.body));
+          });
+        } catch (err) {
+          console.error("[WebSocket] Error en suscripción global:", err);
+        }
 
-        // Re‑suscribir a todas las conversaciones que ya tenían callback registrado
-        for (const [convId, callback] of this.onMessageCallbacks.entries()) {
-          this.subscribeToConversationInternal(convId, callback);
+        for (const [id, cb] of this.onMessageCallbacks.entries()) {
+          this.subscribeToConversationInternal(id, cb);
         }
       },
       onDisconnect: () => {
-        console.log("[WebSocket] Desconectado");
+        console.log("[WebSocket] Desconectado (sin reconexión)");
         this.isConnected = false;
+        this.isConnecting = false;
       },
       onStompError: (frame) => {
         console.error("[WebSocket] Error STOMP:", frame.headers["message"]);
         this.isConnected = false;
+        this.isConnecting = false;
       },
+      onWebSocketError: (event) => {
+        console.error("[WebSocket] Error WebSocket:", event);
+        this.isConnected = false;
+        this.isConnecting = false;
+      }
     });
+
     this.stompClient.activate();
   }
 
-  // Registrar callback para eventos globales (lista de conversaciones)
   setGlobalUpdateCallback(callback: (data: unknown) => void) {
     this.onGlobalUpdate = callback;
-    if (!this.isConnected && !this.stompClient?.connected) {
+    if (!this.isConnected && !this.isConnecting) this.connect();
+  }
+
+  subscribeToConversation(conversationId: number, onMessage: (msg: MensajeWebSocket) => void) {
+    this.onMessageCallbacks.set(conversationId, onMessage);
+    if (this.isConnected && this.stompClient) {
+      this.subscribeToConversationInternal(conversationId, onMessage);
+    } else {
       this.connect();
     }
   }
 
-  // Suscribirse a una conversación específica (callback para nuevos mensajes)
-  subscribeToConversation(conversationId: number, onMessage: (msg: MensajeWebSocket) => void) {
-    // Guardar callback
-    this.onMessageCallbacks.set(conversationId, onMessage);
-
-    if (this.isConnected && this.stompClient) {
-      this.subscribeToConversationInternal(conversationId, onMessage);
-    } else {
-      this.connect(); // Asegurar conexión antes de suscribir
-    }
-  }
-
   private subscribeToConversationInternal(conversationId: number, onMessage: (msg: MensajeWebSocket) => void) {
-    if (this.subscriptions.has(conversationId)) {
-      console.log(`[WebSocket] Ya suscrito a conversación ${conversationId}`);
-      return;
+    if (!this.stompClient || !this.isConnected) return;
+    if (this.subscriptions.has(conversationId)) return;
+    try {
+      const sub = this.stompClient.subscribe(`/topic/conversacion/${conversationId}/mensajes`, (msg) => {
+        onMessage(JSON.parse(msg.body));
+      });
+      this.subscriptions.set(conversationId, sub);
+      console.log(`[WebSocket] Suscrito a conversación ${conversationId}`);
+    } catch (err) {
+      console.error(`[WebSocket] Error suscribiendo a ${conversationId}:`, err);
     }
-    const sub = this.stompClient!.subscribe(
-      `/topic/conversacion/${conversationId}/mensajes`,
-      (msg: IMessage) => {
-        const mensaje: MensajeWebSocket = JSON.parse(msg.body);
-        onMessage(mensaje);
-      }
-    );
-    this.subscriptions.set(conversationId, sub);
-    console.log(`[WebSocket] Suscrito a conversación ${conversationId}`);
   }
 
-  // Desuscribirse de una conversación
   unsubscribeFromConversation(conversationId: number) {
     const sub = this.subscriptions.get(conversationId);
     sub?.unsubscribe();
@@ -798,7 +806,6 @@ class ChatWebSocket {
     console.log(`[WebSocket] Desuscrito de conversación ${conversationId}`);
   }
 
-  // Enviar mensaje por WebSocket
   sendMessage(conversationId: number, mensajeRequest: Partial<MensajeWebSocket>) {
     if (this.isConnected && this.stompClient) {
       this.stompClient.publish({
@@ -811,19 +818,15 @@ class ChatWebSocket {
     return false;
   }
 
-  // Verificar estado
   getIsConnected(): boolean {
     return this.isConnected;
   }
 
-  // Obtener lista de conversaciones suscritas (útil para depuración)
   getSubscribedConversations(): number[] {
     return Array.from(this.subscriptions.keys());
   }
 
-  // Desconectar completamente
-  disconnect() {
-    console.log("[WebSocket] Desconectando completamente...");
+  private cleanup() {
     this.subscriptions.forEach(sub => sub.unsubscribe());
     this.subscriptions.clear();
     this.globalSubscription?.unsubscribe();
@@ -833,11 +836,16 @@ class ChatWebSocket {
       this.stompClient = null;
     }
     this.isConnected = false;
+    this.isConnecting = false;
+  }
+
+  disconnect() {
+    console.log("[WebSocket] Desconectando manualmente...");
+    this.cleanup();
     this.onMessageCallbacks.clear();
     this.onGlobalUpdate = null;
   }
 }
 
-// Singleton exportado
 const chatWebSocket = new ChatWebSocket();
 export default chatWebSocket;

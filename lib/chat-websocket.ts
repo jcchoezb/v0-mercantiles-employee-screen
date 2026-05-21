@@ -435,6 +435,9 @@ class ChatWebSocket {
 const chatWebSocket = new ChatWebSocket();
 export default chatWebSocket;*/
 
+
+/* //VERSION 3 FUNCIONAL OK CASI PERFECTA
+
 import { Client, IMessage } from "@stomp/stompjs";
 
 const WS_URL_BASE = process.env.NEXT_PUBLIC_WS_URL || "http://localhost:8080/api/ws-chat";
@@ -662,5 +665,179 @@ class ChatWebSocket {
   }
 }
 
+const chatWebSocket = new ChatWebSocket();
+export default chatWebSocket;*/
+
+import { Client, IMessage } from "@stomp/stompjs";
+
+const WS_URL_BASE = process.env.NEXT_PUBLIC_WS_URL || "http://localhost:8080/api/ws-chat";
+const WS_URL = WS_URL_BASE.replace(/^http/, 'ws');
+
+export interface MensajeWebSocket {
+  id?: number;
+  conversacionId: number;
+  contenido: string;
+  remitenteTipo: "empleado" | "cliente" | "bot" | "sistema";
+  remitenteId?: number;
+  remitenteNombre?: string;
+  tipoContenido?: string;
+  tipoEvento?: string;
+  createdAt?: string;
+  leido?: boolean;
+}
+
+function getAuthToken(): string | null {
+  if (typeof window !== "undefined") {
+    return localStorage.getItem("auth_token");
+  }
+  return null;
+}
+
+class ChatWebSocket {
+  private stompClient: Client | null = null;
+  private subscriptions = new Map<number, { unsubscribe: () => void }>();
+  private globalSubscription: { unsubscribe: () => void } | null = null;
+  private isConnected = false;
+
+  // Callbacks externos
+  private onGlobalUpdate: ((data: unknown) => void) | null = null;
+  private onMessageCallbacks = new Map<number, (msg: MensajeWebSocket) => void>();
+
+  // Iniciar conexión única
+  connect() {
+    if (this.stompClient?.connected || this.isConnected) {
+      console.log("[WebSocket] Ya conectado, no se crea nueva conexión");
+      return;
+    }
+
+    const token = getAuthToken();
+    if (!token) {
+      console.warn("[WebSocket] No hay token, esperando autenticación...");
+      return;
+    }
+
+    console.log("[WebSocket] Iniciando conexión única...");
+    this.stompClient = new Client({
+      brokerURL: WS_URL,
+      connectHeaders: { Authorization: `Bearer ${token}` },
+      reconnectDelay: 5000,
+      heartbeatIncoming: 4000,
+      heartbeatOutgoing: 4000,
+      onConnect: () => {
+        console.log("[WebSocket] ✅ Conectado exitosamente (única instancia)");
+        this.isConnected = true;
+
+        // Suscripción global (una sola vez)
+        this.globalSubscription = this.stompClient!.subscribe(
+          "/topic/conversaciones",
+          (msg: IMessage) => {
+            const data = JSON.parse(msg.body);
+            this.onGlobalUpdate?.(data);
+          }
+        );
+
+        // Re‑suscribir a todas las conversaciones que ya tenían callback registrado
+        for (const [convId, callback] of this.onMessageCallbacks.entries()) {
+          this.subscribeToConversationInternal(convId, callback);
+        }
+      },
+      onDisconnect: () => {
+        console.log("[WebSocket] Desconectado");
+        this.isConnected = false;
+      },
+      onStompError: (frame) => {
+        console.error("[WebSocket] Error STOMP:", frame.headers["message"]);
+        this.isConnected = false;
+      },
+    });
+    this.stompClient.activate();
+  }
+
+  // Registrar callback para eventos globales (lista de conversaciones)
+  setGlobalUpdateCallback(callback: (data: unknown) => void) {
+    this.onGlobalUpdate = callback;
+    if (!this.isConnected && !this.stompClient?.connected) {
+      this.connect();
+    }
+  }
+
+  // Suscribirse a una conversación específica (callback para nuevos mensajes)
+  subscribeToConversation(conversationId: number, onMessage: (msg: MensajeWebSocket) => void) {
+    // Guardar callback
+    this.onMessageCallbacks.set(conversationId, onMessage);
+
+    if (this.isConnected && this.stompClient) {
+      this.subscribeToConversationInternal(conversationId, onMessage);
+    } else {
+      this.connect(); // Asegurar conexión antes de suscribir
+    }
+  }
+
+  private subscribeToConversationInternal(conversationId: number, onMessage: (msg: MensajeWebSocket) => void) {
+    if (this.subscriptions.has(conversationId)) {
+      console.log(`[WebSocket] Ya suscrito a conversación ${conversationId}`);
+      return;
+    }
+    const sub = this.stompClient!.subscribe(
+      `/topic/conversacion/${conversationId}/mensajes`,
+      (msg: IMessage) => {
+        const mensaje: MensajeWebSocket = JSON.parse(msg.body);
+        onMessage(mensaje);
+      }
+    );
+    this.subscriptions.set(conversationId, sub);
+    console.log(`[WebSocket] Suscrito a conversación ${conversationId}`);
+  }
+
+  // Desuscribirse de una conversación
+  unsubscribeFromConversation(conversationId: number) {
+    const sub = this.subscriptions.get(conversationId);
+    sub?.unsubscribe();
+    this.subscriptions.delete(conversationId);
+    this.onMessageCallbacks.delete(conversationId);
+    console.log(`[WebSocket] Desuscrito de conversación ${conversationId}`);
+  }
+
+  // Enviar mensaje por WebSocket
+  sendMessage(conversationId: number, mensajeRequest: Partial<MensajeWebSocket>) {
+    if (this.isConnected && this.stompClient) {
+      this.stompClient.publish({
+        destination: `/app/chat/${conversationId}`,
+        body: JSON.stringify(mensajeRequest),
+      });
+      return true;
+    }
+    console.warn("[WebSocket] No conectado, mensaje no enviado");
+    return false;
+  }
+
+  // Verificar estado
+  getIsConnected(): boolean {
+    return this.isConnected;
+  }
+
+  // Obtener lista de conversaciones suscritas (útil para depuración)
+  getSubscribedConversations(): number[] {
+    return Array.from(this.subscriptions.keys());
+  }
+
+  // Desconectar completamente
+  disconnect() {
+    console.log("[WebSocket] Desconectando completamente...");
+    this.subscriptions.forEach(sub => sub.unsubscribe());
+    this.subscriptions.clear();
+    this.globalSubscription?.unsubscribe();
+    this.globalSubscription = null;
+    if (this.stompClient) {
+      this.stompClient.deactivate();
+      this.stompClient = null;
+    }
+    this.isConnected = false;
+    this.onMessageCallbacks.clear();
+    this.onGlobalUpdate = null;
+  }
+}
+
+// Singleton exportado
 const chatWebSocket = new ChatWebSocket();
 export default chatWebSocket;
